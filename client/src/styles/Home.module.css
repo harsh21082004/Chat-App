@@ -1,0 +1,66 @@
+.right {
+    display: flex;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 80px;
+    overflow: hidden;
+}
+
+.main{
+    width: 30%;
+    min-width: 230px;
+    /* max-width: 500px; */
+    position: relative;
+}
+
+@media screen and (max-width: 760px) {
+    .main{
+        max-width: 100%;
+        width: calc(100% - 60px);
+        position: fixed;
+        left: 60px;
+        z-index: 10;
+        top: 0;
+        bottom: 0;
+    }
+
+    .right{
+        left: 60px;
+    }
+
+    .conversationsClose{
+        display: none;
+    }
+
+    .conversationsOpen{
+        display: block;
+    }
+}
+
+@media screen and (max-width: 600px) {
+
+    .right{
+        width: 100%;
+    }
+
+    .main {
+        max-width: 100%;
+        width: calc(100% - 60px);
+        position: fixed;
+        left: 60px;
+        z-index: 10;
+        top: 0;
+        bottom: 0;
+    }
+
+    .conversationsClose{
+        display: none;
+    }
+
+    .conversationsOpen{
+        display: block;
+    }
+}

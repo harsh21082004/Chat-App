@@ -1,0 +1,17 @@
+body {
+  margin: 0;
+  font-family: "SUSE", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  overflow-y: auto;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+p,h1,h2,h3,h4,h5,h6,span,ul,li,a{
+  margin: 0;
+  padding: 0;
+}
