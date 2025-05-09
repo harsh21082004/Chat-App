@@ -22,7 +22,6 @@ conn.once("open", () => {
 const email1 = process.env.EMAIL
 const pass = process.env.EMAIL_PASS;
 
-const url = "http://localhost:5000";
 
 
 exports.register = async (req, res) => {
@@ -34,7 +33,7 @@ exports.register = async (req, res) => {
     let fileUrl;
 
     if (req.file) {
-      fileUrl = `${url}/api/auth/file/${req.file.filename}`;
+      fileUrl = `/api/auth/file/${req.file.filename}`;
       console.log(fileUrl);
     }
 

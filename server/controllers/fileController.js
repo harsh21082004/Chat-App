@@ -30,3 +30,15 @@ exports.getImage = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.getFiles =  async (req, res) => {
+  const { filename } = req.params;
+  const db = mongoose.connection.db;
+  const bucket = new mongoose.mongo.GridFSBucket(db, { bucketName: 'uploads' });
+
+  try {
+      bucket.openDownloadStreamByName(filename).pipe(res);
+  } catch (error) {
+      res.status(404).json({ error: 'File not found' });
+  }
+}

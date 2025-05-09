@@ -5,21 +5,21 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const storage = new GridFsStorage({
-  url: process.env.MONGO_URI, // Make sure this is correct
+  url: process.env.MONGO_URI,
   options: { useNewUrlParser: true, useUnifiedTopology: true },
-  file: (request, file) => {
-    const match = ["image/png", "image/jpg"];
-    console.log(file)
+  file: (req, file) => {
+    const match = ["image/png", "image/jpeg", "image/jpg", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"];
 
-    if (match.indexOf(file.mimeType) === -1) {
-      return `${Date.now()}-file-${file.originalname}`;
+    if (match.includes(file.mimetype)) {
+      return {
+        bucketName: "uploads",
+        filename: `${Date.now()}-file-${file.originalname}`,
+      };
     }
 
-    return {
-      bucketName: "uploads",
-      filename: `${Date.now()}-file-${file.originalname}`
-    }
-  }
+    // If the file type is not allowed
+    return null;
+  },
 });
 
 const upload = multer({ storage });

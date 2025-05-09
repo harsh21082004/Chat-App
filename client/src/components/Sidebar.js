@@ -41,7 +41,7 @@ const Sidebar = () => {
                     <p>Menu</p>
                 </div>
                 <div className={styles.profile}>
-                    <img src={user ? user.profilePhoto : ''} alt="profile" />
+                    <img src={`${process.env.REACT_APP_BACKEND_BASE_URL + user?.profilePhoto}`} alt="profile" />
                     <i className="fa-solid fa-plus"></i>
                     <p>Profile</p>
                 </div>

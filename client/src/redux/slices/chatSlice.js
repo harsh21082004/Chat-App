@@ -1,46 +1,83 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { addConversation } from '../thunks/conversationThunk';
+import { getMessages, markAsSeen, sendMessage } from '../thunks/chatThunks';
 
 const initialState = {
   messages: [],
   newMessage: null,
-  activePage: 'conversations',
   status: 'idle',
+  fetched: false,
+  activeConversationId: null,
 };
+
 
 const chatSlice = createSlice({
   name: 'chat',
   initialState,
   reducers: {
     setMessages: (state, action) => {
-      state.messages = action.payload;
+      console.log(action.payload)
+      state.messages = action.payload.messages;
+      state.activeConversationId = action.payload.conversationId;
+      state.fetched = true;
     },
     addMessage: (state, action) => {
       state.messages.push(action.payload);
     },
     setNewMessage: (state, action) => {
-      console.log('New message:', action.payload);
       state.newMessage = action.payload;
     },
-    setActivePage: (state, action) => {
-      state.activePage = action.payload;
+    resetMessages: (state) => {
+      state.messages = [];
+      state.activeConversationId = null;
+      state.fetched = false;
     }
   },
+
   extraReducers: (builder) => {
     builder
       //Add Conversation
-      .addCase(addConversation.fulfilled, (state, action) => {
-        console.log('Conversation added:', action.payload);
+      .addCase(sendMessage.fulfilled, (state, action) => {
+        console.log('Message Sent:', action.payload);
         state.status = 'succeeded';
+        state.newMessage = null;
+        state.messages.push(action.payload);
       })
-      .addCase(addConversation.pending, (state, action) => {
+      .addCase(sendMessage.pending, (state, action) => {
         state.status = 'loading';
       })
-      .addCase(addConversation.rejected, (state, action) => {
+      .addCase(sendMessage.rejected, (state, action) => {
         state.status = 'failed';
       })
+
+      //Get Messages
+      .addCase(getMessages.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.messages = action.payload.messages;
+        state.fetched = true;
+      })
+      .addCase(getMessages.pending, (state, action) => {
+        state.status = 'loading';
+      })
+      .addCase(getMessages.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+        state.fetched = false;
+      })
+
+      //Seen Messages
+      .addCase(markAsSeen.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+      })
+      .addCase(markAsSeen.pending, (state, action) => {
+        state.status = 'loading';
+      })
+      .addCase(markAsSeen.rejected, (state, action) => {
+        state.status = 'failed';
+      })
+
   }
 });
 
-export const { setMessages, addMessage, setNewMessage, setActivePage } = chatSlice.actions;
+export const { setMessages, addMessage, setNewMessage, resetMessages } = chatSlice.actions;
+
 export default chatSlice.reducer;

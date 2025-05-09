@@ -1,13 +1,14 @@
 const express = require('express');
-const { createChat, sendMessage, getMessages, markAsSeen, addLastMessageSender, addLastMessageReceiver } = require('../controllers/ChatController');
+const { createChat, sendMessage, getMessages, markAsSeen } = require('../controllers/ChatController');
+const upload = require('../config/multerConfig');
+const { getFiles } = require('../controllers/fileController');
 
 const router = express.Router();
 
-router.post('/create-chat', createChat);
-router.post('/send-message', sendMessage);
-router.get('/get-messages/:senderId/:receiverId', getMessages);
-router.post('/add-last-message-sender', addLastMessageSender);
-router.post('/add-last-message-receiver', addLastMessageReceiver);
-router.post('/mark-as-seen', markAsSeen);
+router.post('/send-message', upload.array('files'), sendMessage);
+router.get('/get-messages/:conversationId', getMessages);
+router.post('/mark-as-seen/:conversationId', markAsSeen);
+router.get('/files/:filename', getFiles);
+
 
 module.exports = router;

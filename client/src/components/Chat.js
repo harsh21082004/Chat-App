@@ -1,179 +1,452 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import styles from '../styles/Chat.module.css';
 import { Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { setNewMessage } from '../redux/slices/chatSlice';
-import { addConversation } from '../redux/thunks/conversationThunk';
+import { setNewMessage, setMessages } from '../redux/slices/chatSlice';
+import { addConversation, getConversations } from '../redux/thunks/conversationThunk';
+import { sendMessage, getMessages } from '../redux/thunks/chatThunks';
+import ImageViewer from './ImageViewer';
+import ImagePreviewer from './ImagePreviewer';
 
 const Chat = () => {
   const dispatch = useDispatch();
-  const { chatPerson, user } = useSelector((state) => state.user)
-  const { newMeesage } = useSelector((state) => state.chat)
+  const { chatPerson, user } = useSelector((state) => state.user);
+  const chatState = useSelector((state) => state.chat);
+  const conversationState = useSelector((state) => state.conversation);
+
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [incomingMessage, setIncomingMessage] = useState(null);
-
+  const [file, setFile] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0); // ✅ Defined
+  const [isImageOpened, setIsImageOpened] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
+  const [imageUrl, setImageUrl] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
   const scrollRef = useRef(null);
+  const newMessageLabelRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
-  const fetchMessages = async () => {
-    // try {
-    //   const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/chat/get-messages/${user?._id}/${chatPerson?._id}`);
-    //   if (response.status !== 200) {
-    //     console.error('Error fetching messages:', response);
-    //     setMessages([]);
-    //     return;
-    //   }
-    //   setMessages(prev => [...prev, ...response.data.messages]);
+  const textRef = useRef(null);
 
-    // } catch (err) {
-    //   console.error('Error fetching messages:', err);
-    //   setMessages([]);
-    //   console.log('Messages:', messages);
-    // }
+  console.log(file)
+
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (el) {
+      el.style.height = "50px"; // Reset to 1 line
+      const scrollHeight = el.scrollHeight;
+      el.style.height = `${Math.min(scrollHeight, 120)}px`; // Cap at ~5 lines
+    }
+  }, [message]);
+
+  const toggleImageView = (imageIndex, file) => {
+    console.log(imageIndex, file)
+    setImageUrl(file?.url);
+    setImageIndex(imageIndex);
+    setIsImageOpened(!isImageOpened);
   };
 
-  const fetchConversations = async () => {
-    // try {
-    //   const response = await axios.get(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/conversation/get/${user?._id}`); // Ensure conversations contain `lastMessage`
-    //   console.log(response)
-    // } catch (err) {
-    //   console.error('Error fetching conversations:', err);
-    // }
-  };
 
-  // useEffect(() => {
 
-  //   if (chatPerson?._id) {
-  //     fetchMessages();
-  //   }
-  // }, [chatPerson, user, setMessages, newMessage]);
 
-  // useEffect(() => {
-  //   if (user?._id) {
-  //     fetchConversations();
-  //   }
-  // }, [user, chatPerson, setChatPerson, newMessage]);
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!chatPerson?._id || !user?._id) return;
 
-  // useEffect(() => {
-  //   socket?.current?.on('getMessage', data => {
-  //     setIncomingMessage({
-  //       senderId: data.senderId,
-  //       receiverId: data.receiverId,
-  //       content: data.content,
-  //       messageType: data.messageType,
-  //       timestamp: Date.now()
-  //     });
-  //   });
-  // }, [newMessage, chatPerson, socket, incomingMessage, messages]);
+      try {
+        let conversation = conversationState.conversations.find(convo => {
+          return (
+            (convo.senderId._id === user._id && convo.receiverId._id === chatPerson._id) ||
+            (convo.receiverId._id === user._id && convo.senderId._id === chatPerson._id)
+          );
+        });
 
-  // useEffect(() => {
-  //   console.log('chat:', chatPerson?._id, incomingMessage?.senderId);
-  //   if (incomingMessage && chatPerson?._id === incomingMessage?.senderId && user?._id === incomingMessage?.receiverId) {
-  //     setMessages(prev => [...prev, incomingMessage]);
+        if (!conversation) return;
 
-  //   }
-  // }, [incomingMessage, chatPerson])
+        const result = await dispatch(getMessages(conversation._id));
+        console.log(conversation)
+
+        if (getMessages.fulfilled.match(result)) {
+          const messages = result.payload.messages;
+          if (conversation.seen?.receiver?.userId === user._id) {
+            setUnreadCount(conversation.seen.receiver.unreadCount);
+          } else {
+            setUnreadCount(0); // Sender should not see unread count
+          }
+
+          console.log(messages, unreadCount)
+          dispatch(setMessages({ messages, conversationId: conversation._id }));
+        } else {
+          console.error('Failed to load messages:', result.error.message);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+
+    fetchMessages();
+  }, [chatPerson, user, dispatch, conversationState.conversations, unreadCount]);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      const newLabel = newMessageLabelRef.current;
+
+      if (unreadCount > 0 && newLabel) {
+        const labelOffsetTop = newLabel.offsetTop;
+        const containerHeight = container.clientHeight;
+
+        // Scroll so that the "New Messages" label appears at the bottom
+        container.scrollTop = labelOffsetTop - containerHeight + newLabel.clientHeight;
+      } else {
+        // No unread messages, scroll to bottom
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+  }, [chatState.messages, unreadCount]);
+
+
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!message) return;
+    if (!message && !file) return;
+
     try {
-      dispatch(setNewMessage(message))
+      dispatch(setNewMessage(message));
+
       const conversationData = {
-        senderId: user?._id,
-        receiverId: chatPerson?._id,
-        lastMessage: message,
+        senderId: user._id,
+        receiverId: chatPerson._id,
+        lastMessage: file ? 'Sent a file' : message,
         lastMessageTimestamp: Date.now(),
-      }
-      const resultAction = await dispatch(addConversation(conversationData));
-      if (addConversation.fulfilled.match(resultAction)) {
-        console.log('Conversation added:', resultAction.payload);
-        
-      } else {
-        console.error('Failed to add conversation:', resultAction.error.message);
+      };
+
+      const convoResult = await dispatch(addConversation(conversationData));
+      if (addConversation.fulfilled.match(convoResult)) {
+        const conversationId = convoResult.payload.conversation._id;
+        await dispatch(getConversations(user._id));
+
+        let msgPayload = new FormData();
+
+        if (file) {
+          for (let i = 0; i < file.length; i++) {
+            msgPayload.append('files', file[i]);
+          }
+          msgPayload.append('conversationId', conversationId);
+          msgPayload.append('senderId', user._id);
+          msgPayload.append('receiverId', chatPerson._id);
+          msgPayload.append('messageType', 'file');
+        } else {
+          msgPayload.append('content', message);
+          msgPayload.append('conversationId', conversationId);
+          msgPayload.append('senderId', user._id);
+          msgPayload.append('receiverId', chatPerson._id);
+          msgPayload.append('messageType', 'text');
+        }
+
+        const msgResult = await dispatch(sendMessage(msgPayload));
+
+        if (sendMessage.fulfilled.match(msgResult)) {
+          console.log('Message sent:', msgResult.payload);
+        }
       }
     } catch (err) {
       console.error('Error sending message:', err);
     } finally {
       setMessage('');
+      setFile(null);
     }
-
   };
 
-  // useEffect(() => {
-  //   scrollRef.current?.scrollIntoView({ transition: 'smooth' });
-  // }, [messages]);
+  const isFirstInGroup = (messages, index) => {
+    if (index === 0) return true;
+    return messages[index].senderId !== messages[index - 1].senderId;
+  };
 
+
+  const messages = chatState.messages || [];
+  const readMessages = messages.slice(0, messages.length - unreadCount);
+  const unreadMessages = messages.slice(messages.length - unreadCount);
+
+
+  console.log(unreadMessages, readMessages)
+
+
+  const allImageFiles = messages.flatMap(msg =>
+    msg.files.map(file => ({
+      ...file,
+      timestamp: msg.timestamp,
+      senderId: msg.senderId,
+      receiverId: msg.receiverId,
+    }))
+  );
+
+  const imageMessages = allImageFiles.filter(
+    (msg) =>
+      msg.fileType.startsWith('image/')
+  );
+
+  console.log(imageMessages)
 
   return (
     <>
-      {Object.keys(chatPerson).length > 0 ? (
-        <div className={`${styles.chat}`}>
-          <div className={`${styles.header}`}>
-            <div className={`${styles.headerInfo}`}>
-              <div className={`${styles.profileImg}`}>
-                <img src={chatPerson?.profilePhoto} alt="profile" />
+      {chatPerson?._id ? (
+        <div className={styles.chat}>
+          <div className={styles.header}>
+            <div className={styles.headerInfo}>
+              <div className={styles.profileImg}>
+                <img src={`${process.env.REACT_APP_BACKEND_BASE_URL + chatPerson?.profilePhoto}`} alt="profile" />
               </div>
-              <div className={`${styles.details}`}>
+              <div className={styles.details}>
                 <h3>{chatPerson?.name}</h3>
-                {/* <p>{activeUsers?.find(user => user?._id === chatPerson._id) ? 'Online' : 'Offline'}</p> */}
               </div>
             </div>
-            <div className={`${styles.headerRight}`}>
+            <div className={styles.headerRight}>
               <Link><i className="fa-solid fa-phone"></i></Link>
               <Link><i className="fa-solid fa-video"></i></Link>
               <Link><i className="fa-solid fa-ellipsis-vertical"></i></Link>
             </div>
           </div>
 
-          <div className={`${styles.chatBody}`}>
-            {messages?.map((msg, index) => (
-              <div
-                key={index}
-                ref={index === messages.length - 1 ? scrollRef : null}
-              // className={`${styles.message} ${msg.senderId === user?._id ? styles.right : styles.left} ${((index > 0 && messages[index - 1]?.senderId === msg.receiverId && msg.senderId === user?._id) || (index === 0 && msg.senderId === user?._id)) && styles.rightCorner} ${((index > 0 && messages[index - 1]?.receiverId === msg.senderId && msg.senderId !== user?._id) || (index === 0 && msg.senderId !== user?._id)) && styles.leftCorner}`}
-              >
-                <div>
-                  <p className={styles.messageContent}>{msg.content}</p>
-                  <span className={styles.timestamp}>
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
+          <div className={styles.chatBody} ref={chatContainerRef}>
+            {readMessages.map((msg, index) => {
+              const firstInGroup = isFirstInGroup(readMessages, index);
+              const isText = msg.messageType === 'text';
+              const hasFiles = msg.files?.length > 0;
+
+              const imageFiles = msg.files?.filter(file => file.fileType.startsWith('image/')) || [];
+              const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/')) || [];
+
+              const moreImages = imageFiles.length - 4;
+
+              return (
+                <>
+                  {/* Text or Image Message Bubble */}
+                  {(isText || imageFiles.length > 0) && (
+                    <div
+                      key={`read-${index}-text-image`}
+                      className={`
+            ${styles.message}
+            ${msg.senderId === user._id ? styles.right : styles.left}
+            ${imageFiles.length > 0 ? styles.imageMessage : ''}
+            ${firstInGroup ? styles.firstMessage : ''}
+          `}
+                      ref={index === readMessages.length - 1 ? scrollRef : null}
+                    >
+                      <div className={`${styles.messageContainer}`}>
+                        {isText && <p className={styles.messageContent}>{msg.content}</p>}
+
+                        {imageFiles.length > 0 && (
+                          <div className={`${styles.filesContent} ${styles[`files${imageFiles.length >= 4 ? 'more' : imageFiles.length}`]}`}>
+                            {imageFiles.slice(0, 4).map((file, i) => {
+                              const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                              return (
+                                <div key={i} className={styles.fileWrapper} onClick={() => toggleImageView(i, file)}>
+                                  <img src={fileUrl} alt="media" className={styles.chatImage} />
+                                </div>
+                              );
+                            })}
+                            {moreImages > 0 && (
+                              <span className={styles.moreImages}>+{moreImages}</span>
+                            )}
+                          </div>
+                        )}
+
+                        <span className={styles.timestamp}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Separate Message Bubbles for Each File */}
+                  {otherFiles.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    return (
+                      <div
+                        key={`read-${index}-file-${fileIndex}`}
+                        className={`
+              ${styles.message}
+              ${msg.senderId === user._id ? styles.right : styles.left}
+              ${styles.fileType}
+            `}
+                      >
+                        <div className={styles.chatFile}>
+                          <div className={styles.fileDetails}>
+                            <div className={`${styles.fileLeft}`}>
+                              <i className="fa-solid fa-file" style={{ fontSize: '20px', marginRight: '8px' }}></i>
+                              <div className={styles.aboutFile}>
+                                <p className={styles.filename}>{file.filename.split('-')[2]}</p>
+                                <p className={styles.fileSize}>{(file.fileSize / (1024 * 1024)).toFixed(2)} MB</p>
+                              </div>
+                            </div>
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
+                              <i className="fa-solid fa-download" style={{ marginLeft: 'auto' }}></i>
+                            </a>
+                          </div>
+                          <span className={styles.timestamp}>
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })}
+
+            {unreadCount > 0 && (
+              <div className={styles.newMessageLabel} ref={newMessageLabelRef}>
+                <hr />
+                <span style={{ color: 'gray', fontSize: '14px' }}>{unreadCount} Unread Messages</span>
+                <hr />
               </div>
-            ))}
+            )}
+
+            {unreadMessages.map((msg, index) => {
+              const firstInGroup = isFirstInGroup(readMessages, index);
+              const isText = msg.messageType === 'text';
+              const hasFiles = msg.files?.length > 0;
+
+              const imageFiles = msg.files?.filter(file => file.fileType.startsWith('image/')) || [];
+              const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/')) || [];
+
+              const moreImages = imageFiles.length - 4;
+
+              return (
+                <>
+                  {/* Text or Image Message Bubble */}
+                  {(isText || imageFiles.length > 0) && (
+                    <div
+                      key={`read-${index}-text-image`}
+                      className={`
+            ${styles.message}
+            ${msg.senderId === user._id ? styles.right : styles.left}
+            ${imageFiles.length > 0 ? styles.imageMessage : ''}
+            ${firstInGroup ? styles.firstMessage : ''}
+          `}
+                      ref={index === readMessages.length - 1 ? scrollRef : null}
+                    >
+                      <div className={`${styles.messageContainer}`}>
+                        {isText && <p className={styles.messageContent}>{msg.content}</p>}
+
+                        {imageFiles.length > 0 && (
+                          <div className={`${styles.filesContent} ${styles[`files${imageFiles.length >= 4 ? 4 : imageFiles.length}`]}`}>
+                            {imageFiles.slice(0, 4).map((file, i) => {
+                              const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                              return (
+                                <div key={i} className={styles.fileWrapper}>
+                                  <img src={fileUrl} alt="media" className={styles.chatImage} />
+                                </div>
+                              );
+                            })}
+                            {moreImages > 0 && (
+                              <span className={styles.moreImages}>+{moreImages}</span>
+                            )}
+                          </div>
+                        )}
+
+                        <span className={styles.timestamp}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Separate Message Bubbles for Each File */}
+                  {otherFiles.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    return (
+                      <div
+                        key={`read-${index}-file-${fileIndex}`}
+                        className={`
+              ${styles.message}
+              ${msg.senderId === user._id ? styles.right : styles.left}
+              ${styles.fileType}
+            `}
+                      >
+                        <div className={styles.chatFile}>
+                          <div className={styles.fileDetails}>
+                            <div className={`${styles.fileLeft}`}>
+                              <i className="fa-solid fa-file" style={{ fontSize: '20px', marginRight: '8px' }}></i>
+                              <div className={styles.aboutFile}>
+                                <p className={styles.filename}>{file.filename.split('-')[2]}</p>
+                                <p className={styles.fileSize}>{(file.fileSize / (1024 * 1024)).toFixed(2)} MB</p>
+                              </div>
+                            </div>
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
+                              <i className="fa-solid fa-download" style={{ marginLeft: 'auto' }}></i>
+                            </a>
+                          </div>
+                        </div>
+                        <span className={styles.timestamp}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })}
+
           </div>
 
-          <div className={`${styles.footer}`}>
+          <div className={styles.footer}>
             <form onSubmit={handleSendMessage}>
-              <div className={`${styles.input}`}>
-                <input
-                  type="text"
-                  id="message"
+              <div className={styles.input}>
+                <label className={styles.attachFile} htmlFor="file"><img src="/attach-file.png" alt="attach" /></label>
+                <textarea
+                  ref={textRef}
                   placeholder="Type a message"
-                  className={`${styles.text}`}
+                  className={styles.text}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault(); // prevent newline
+                      handleSendMessage(e); // send message
+                    }
+                  }}
                 />
-                <input type="file" name="" id="file" className={`${styles.file}`} />
-                <span>
-                  <label htmlFor="file"><img src="/attach-file.png" alt="attach" /></label>
-                </span>
-                <div className={`${styles.footerIcons}`}>
+
+                <input
+                  type="file"
+                  id="file"
+                  className={styles.file}
+                  onChange={(e) => {
+                    setFile(e.target.files)
+                    setShowPreview(true);
+                  }}
+                  multiple
+                />
+                <div className={styles.footerIcons}>
                   <img src="/mic.png" alt="mic" />
-                  <div className={`${styles.sep}`}></div>
-                  <img src="/send.png" alt="send" onClick={handleSendMessage} />
+                  <div className={styles.sep}></div>
+                  <button type="submit" className={styles.sendButton}>
+                    <img src="/send.png" alt="send" />
+                  </button>
                 </div>
               </div>
             </form>
           </div>
         </div>
       ) : (
-        <div className={`${styles.chatImage}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-          <img src="/emptyChat.png" style={{ width: '500px', height: '500px' }} alt="cloud" />
+        <div className={styles.emptyChat}>
+          <img src="/emptyChat.png" alt="cloud" style={{ width: '500px', height: '500px' }} />
           <h2 style={{ color: 'gray' }}>Open a chat to start messaging</h2>
         </div>
       )}
+      {isImageOpened && (
+        <ImageViewer images={imageMessages} imageUrl={imageUrl} onClose={toggleImageView} chatPerson={chatPerson} />
+      )}
+
+      {showPreview && <ImagePreviewer files={file} onClose={() => {
+        setFile(null);
+        setShowPreview(false)}} />}
     </>
   );
 };

@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
 import Routers from './Routers';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { fetchAllUsers, fetchUserFromToken } from './redux/thunks/userThunks';
 import { jwtDecode } from 'jwt-decode';
 
 const App = () => {
     const dispatch = useDispatch();
+    const {user} = useSelector((state) => state.user)
 
     const isTokenExpired = (token) => {
         try {
@@ -17,6 +18,10 @@ const App = () => {
             return true; // If token is invalid or decoding fails, treat it as expired
         }
     };
+
+    console.log(user)
+
+
 
     useEffect(() => {
         const token = localStorage.getItem('token');

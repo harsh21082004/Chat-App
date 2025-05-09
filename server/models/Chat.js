@@ -1,30 +1,18 @@
 const mongoose = require('mongoose');
 
 const FileSchema = new mongoose.Schema({
-  url: {
-    type: String,
-  },
-  filename: {
-    type: String,
-  },
-  fileType: {
-    type: String,  
-  },
-  fileSize: {
-    type: Number,  // size in bytes
-  },
+  url: String,
+  filename: String,
+  fileType: String,
+  fileSize: Number,
+  filecaption: String,
   uploadedAt: {
     type: Date,
     default: Date.now,
   },
-});
+}, { _id: false });
 
-const ChatSchema = new mongoose.Schema({
-  conversationId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Conversation',
-    required: true,
-  },
+const MessageSchema = new mongoose.Schema({
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'UserData',
@@ -35,27 +23,39 @@ const ChatSchema = new mongoose.Schema({
     ref: 'UserData',
     required: true,
   },
-  messages: [{
-    senderId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'UserData',
-    },
-    receiverId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'UserData',
-    },
-    messageType: {
-      type: String,  // 'text', 'file', 'image', etc.
-    },
-    content: {
-      type: String,  // for text messages
-    },
-    files: [FileSchema],  // array of file metadata
-    timestamp: {
-      type: Date,
-      default: Date.now,
-    },
-  }],
+  messageType: {
+    type: String,
+    enum: ['text', 'image', 'file', 'video'],
+    default: 'text',
+  },
+  content: {
+    type: String,
+  },
+  files: [FileSchema],
+  isSeen: {
+    type: Boolean,
+    default: false,
+  },
+  isDelivered: {
+    type: Boolean,
+    default: false,
+  },
+  timestamp: {
+    type: Date,
+    default: Date.now,
+  },
+}, { _id: false });
+
+const ChatSchema = new mongoose.Schema({
+  conversationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Conversation',
+    required: true,
+    index: true,
+  },
+  messages: [MessageSchema],
+}, {
+  timestamps: true,
 });
 
 module.exports = mongoose.model('Chat', ChatSchema);

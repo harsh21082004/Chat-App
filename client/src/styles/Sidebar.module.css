@@ -16,12 +16,13 @@
     gap: 40px;
     background-color: #18171D;
     border-right: 3px solid #23222A;
-    z-index: 5;
+    z-index: -1;
     transition: all 0.3s ease;
 }
 
 .sidebarOpen{
     width: 200px;
+    z-index: 5;
 }
 
 .sidebarOpen .activeBar{

@@ -97,28 +97,33 @@ exports.newConversation = async (req, res) => {
     }
   };
 
-// Get all conversations for a user
-exports.getConversation = async (req, res) => {
-    const { senderId } = req.params;
-
-    // Ensure senderId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(senderId)) {
-        return res.status(400).json('Invalid ObjectId format');
+  // Get Conversations
+  exports.getConversation = async (req, res) => {
+    const { userId } = req.params;
+    console.log(userId)
+  
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: 'Invalid ObjectId format' });
     }
-
+  
     try {
-        // Find conversations where the user is the sender
-        const conversations = await Conversation.find({
-            'members.senderId': senderId
-        });
-
-        // if (!conversations || conversations[0].length === 0) {
-        //     return res.status(404).json('No conversations found');
-        // }
-
-        res.status(200).json(conversations);
+      const conversations = await Conversation.find({
+        $or: [
+          { senderId: userId },
+          { receiverId: userId },
+        ]
+      })
+        .populate('senderId receiverId') // fetch user details
+        .sort({ lastMessageTimestamp: -1 }); // latest first
+  
+      if (!conversations.length) {
+        return res.status(404).json({ message: 'No conversations found' });
+      }
+  
+      res.status(200).json(conversations);
     } catch (error) {
-        console.error('Error fetching conversations:', error);
-        res.status(500).json(error);
+      console.error('Error fetching conversations:', error.message);
+      res.status(500).json({ error: error.message });
     }
-};
+  };
+  

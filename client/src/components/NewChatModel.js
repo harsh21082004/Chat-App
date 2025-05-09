@@ -1,26 +1,22 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from '../styles/NewChatModel.module.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { setChatPerson } from '../redux/slices/userSlice';
-import { toggleActivePage } from '../redux/thunks/chatThunks';
-// import { NewChatContext } from '../context/NewChatContext';
-// import { AccountContext } from '../context/AccountContext';
+import { toggleActivePage } from '../redux/slices/conversationSlice';
 
 const NewChatModel = () => {
-    // const { isNewChatModalOpen, toggleNewChatModal, users } = useContext(NewChatContext);
-    // const { user, setChatPerson } = useContext(AccountContext);
     const dispatch = useDispatch();
     const { user, users, chatPerson } = useSelector((state) => state.user);
-    const { activePage } = useSelector((state) => state.chat)
+    const { activePage } = useSelector((state) => state.conversation)
     const [searchTerm, setSearchTerm] = useState('');
 
     const [userList, setUserList] = useState([]);
 
     useEffect(() => {
         if (users && Array.isArray(users)) {
-            const updatedUserList = users.map((u) => ({
+            const updatedUserList = users?.map((u) => ({
                 ...u,
-                name: u._id === user._id ? `${u.name} (You)` : u.name
+                name: u?._id === user?._id ? `${u?.name} (You)` : u?.name
             }));
             setUserList(updatedUserList);
         }
