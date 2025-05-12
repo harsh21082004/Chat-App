@@ -10,6 +10,7 @@ import 'react-phone-input-2/lib/style.css';
 import OtpInput from 'react-otp-input';
 import { useDispatch } from 'react-redux';
 import { addAuthUser, register, verifyUser } from '../redux/thunks/userThunks';
+import BlueButton from './Buttons/BlueButton';
 
 const Register = () => {
   const dispatch = useDispatch();
@@ -292,9 +293,7 @@ const Register = () => {
                       Accept terms and conditions
                     </label>
                   </div>
-                  <div className={`${styles.btn}`}>
-                    <button type="submit">Create account</button>
-                  </div>
+                  <BlueButton text={'Create Account'} submit={sendOtp}/>
                 </>
               )}
             </>

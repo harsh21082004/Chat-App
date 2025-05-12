@@ -6,7 +6,10 @@ import { setNewMessage, setMessages } from '../redux/slices/chatSlice';
 import { addConversation, getConversations } from '../redux/thunks/conversationThunk';
 import { sendMessage, getMessages } from '../redux/thunks/chatThunks';
 import ImageViewer from './ImageViewer';
-import ImagePreviewer from './ImagePreviewer';
+import FilePreviewer from './FilePreviewer';
+import TextOrImageMessage from './Chat/TextOrImageMessage';
+import ImageWithFileCaption from './Chat/ImageWithFileCaption';
+import OtherFiles from './Chat/OtherFiles';
 
 const Chat = () => {
   const dispatch = useDispatch();
@@ -27,7 +30,6 @@ const Chat = () => {
 
   const textRef = useRef(null);
 
-  console.log(file)
 
 
   useEffect(() => {
@@ -64,7 +66,6 @@ const Chat = () => {
         if (!conversation) return;
 
         const result = await dispatch(getMessages(conversation._id));
-        console.log(conversation)
 
         if (getMessages.fulfilled.match(result)) {
           const messages = result.payload.messages;
@@ -74,7 +75,6 @@ const Chat = () => {
             setUnreadCount(0); // Sender should not see unread count
           }
 
-          console.log(messages, unreadCount)
           dispatch(setMessages({ messages, conversationId: conversation._id }));
         } else {
           console.error('Failed to load messages:', result.error.message);
@@ -168,8 +168,9 @@ const Chat = () => {
   const readMessages = messages.slice(0, messages.length - unreadCount);
   const unreadMessages = messages.slice(messages.length - unreadCount);
 
+  console.log(messages)
 
-  console.log(unreadMessages, readMessages)
+
 
 
   const allImageFiles = messages.flatMap(msg =>
@@ -186,7 +187,6 @@ const Chat = () => {
       msg.fileType.startsWith('image/')
   );
 
-  console.log(imageMessages)
 
   return (
     <>
@@ -217,93 +217,38 @@ const Chat = () => {
               const imageFiles = msg.files?.filter(file => file.fileType.startsWith('image/')) || [];
               const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/')) || [];
 
-              const moreImages = imageFiles.length - 4;
+              const imageFilesWithCaption = imageFiles.filter(file => file.filecaption?.trim() !== '');
+              const imageFilesWithoutCaption = imageFiles.filter(file => !file.filecaption?.trim());
+
+              const moreImages = imageFilesWithoutCaption.length - 4;
 
               return (
                 <>
-                  {/* Text or Image Message Bubble */}
-                  {(isText || imageFiles.length > 0) && (
-                    <div
-                      key={`read-${index}-text-image`}
-                      className={`
-            ${styles.message}
-            ${msg.senderId === user._id ? styles.right : styles.left}
-            ${imageFiles.length > 0 ? styles.imageMessage : ''}
-            ${firstInGroup ? styles.firstMessage : ''}
-          `}
-                      ref={index === readMessages.length - 1 ? scrollRef : null}
-                    >
-                      <div className={`${styles.messageContainer}`}>
-                        {isText && <p className={styles.messageContent}>{msg.content}</p>}
-
-                        {imageFiles.length > 0 && (
-                          <div className={`${styles.filesContent} ${styles[`files${imageFiles.length >= 4 ? 'more' : imageFiles.length}`]}`}>
-                            {imageFiles.slice(0, 4).map((file, i) => {
-                              const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
-                              return (
-                                <div key={i} className={styles.fileWrapper} onClick={() => toggleImageView(i, file)}>
-                                  <img src={fileUrl} alt="media" className={styles.chatImage} />
-                                </div>
-                              );
-                            })}
-                            {moreImages > 0 && (
-                              <span className={styles.moreImages}>+{moreImages}</span>
-                            )}
-                          </div>
-                        )}
-
-                        <span className={styles.timestamp}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
-                      </div>
-                    </div>
+                  {/* Text or Image Grid (if no captions) */}
+                  {(isText || imageFiles.filter(file => file.filecaption === '').length > 0) && (
+                    <TextOrImageMessage index={index} msg={msg} imageFilesWithoutCaption={imageFilesWithoutCaption} moreImages={moreImages} firstInGroup={firstInGroup} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleImageView={toggleImageView} />
                   )}
 
-                  {/* Separate Message Bubbles for Each File */}
-                  {otherFiles.map((file, fileIndex) => {
+                  {/* Images with Captions (rendered separately) */}
+                  {imageFilesWithCaption.length > 0 && imageFilesWithCaption.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     return (
-                      <div
-                        key={`read-${index}-file-${fileIndex}`}
-                        className={`
-              ${styles.message}
-              ${msg.senderId === user._id ? styles.right : styles.left}
-              ${styles.fileType}
-            `}
-                      >
-                        <div className={styles.chatFile}>
-                          <div className={styles.fileDetails}>
-                            <div className={`${styles.fileLeft}`}>
-                              <i className="fa-solid fa-file" style={{ fontSize: '20px', marginRight: '8px' }}></i>
-                              <div className={styles.aboutFile}>
-                                <p className={styles.filename}>{file.filename.split('-')[2]}</p>
-                                <p className={styles.fileSize}>{(file.fileSize / (1024 * 1024)).toFixed(2)} MB</p>
-                              </div>
-                            </div>
-                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
-                              <i className="fa-solid fa-download" style={{ marginLeft: 'auto' }}></i>
-                            </a>
-                          </div>
-                          <span className={styles.timestamp}>
-                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
-                        </div>
-                      </div>
+                      <ImageWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleImageView={toggleImageView} msg={msg} />
+                    )
+                  })}
+
+                  {/* Other file types */}
+                  {otherFiles.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    const containsCaption = file.filecaption?.trim() !== '';
+                    return (
+                      <OtherFiles index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} containsCaption={containsCaption} firstInGroup={firstInGroup} msg={msg} />
                     );
                   })}
                 </>
               );
             })}
 
-            {unreadCount > 0 && (
-              <div className={styles.newMessageLabel} ref={newMessageLabelRef}>
-                <hr />
-                <span style={{ color: 'gray', fontSize: '14px' }}>{unreadCount} Unread Messages</span>
-                <hr />
-              </div>
-            )}
 
             {unreadMessages.map((msg, index) => {
               const firstInGroup = isFirstInGroup(readMessages, index);
@@ -433,6 +378,10 @@ const Chat = () => {
               </div>
             </form>
           </div>
+          {showPreview && <FilePreviewer files={file} onClose={() => {
+            setFile(null);
+            setShowPreview(false)
+          }} />}
         </div>
       ) : (
         <div className={styles.emptyChat}>
@@ -444,9 +393,6 @@ const Chat = () => {
         <ImageViewer images={imageMessages} imageUrl={imageUrl} onClose={toggleImageView} chatPerson={chatPerson} />
       )}
 
-      {showPreview && <ImagePreviewer files={file} onClose={() => {
-        setFile(null);
-        setShowPreview(false)}} />}
     </>
   );
 };

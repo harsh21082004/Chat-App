@@ -1,0 +1,228 @@
+.overlay {
+  position: absolute;
+  top: 80px;
+  background-color: #18171D;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  width: 100%;
+  height: calc(100% - 80px);
+  bottom: 0;
+}
+
+.topBar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+}
+
+.download {
+  font-size: 20px;
+  color: white;
+  cursor: pointer;
+}
+
+.actions {
+  height: 35px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions i {
+  margin: 0 8px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actions i img {
+  width: 16px;
+  height: 16px;
+}
+
+.imageContainer,
+.fileContainer {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: calc(100% - 200px);
+  position: relative;
+}
+
+.fileContainer {
+  max-width: 300px;
+  background-color: #1d1c25;
+  border-radius: 10px;
+  gap: 20px;
+}
+
+.cropperContainer {
+  height: 100%;
+  padding-bottom: 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+}
+
+.cropButton {
+  background-color: #1e90ff;
+  outline: none;
+  max-width: 150px;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 10px;
+}
+
+.cropper {
+  height: 100%;
+}
+
+.cropper div {
+  background-color: #121115 !important;
+  background-image: none !important;
+  border-radius: 10px;
+}
+
+.fileContainer i {
+  font-size: 60px;
+  color: white;
+}
+
+.fileDetails {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+}
+
+.fileDetails p,
+.fileDetails span {
+  font-size: 15px;
+  color: white;
+}
+
+
+.mainImage {
+  border-radius: 10px;
+  object-fit: contain;
+  width: auto;
+  height: 100%;
+}
+
+.captionBar {
+  width: 100%;
+  margin-top: 16px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  bottom: 100px;
+}
+
+.captionInput {
+  width: calc(100% - 60px);
+  border: 2px solid #1D252F;
+  border-radius: 15px;
+  padding: 5px 10px;
+  font-size: 16px;
+  height: 40px;
+  max-height: 120px;
+  outline: none;
+  background-color: #1C1C24;
+  color: white;
+  resize: none;
+  overflow-y: auto;
+}
+
+.sendButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+}
+
+.sendButton img {
+  width: 25px;
+  height: 25px;
+}
+
+.thumbnailBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 8px;
+  height: 100%;
+  max-height: 80px;
+  bottom: 0;
+}
+
+.thumbnail,
+.plusIcon,
+.thumbnailFile {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: 0.2s ease;
+  box-sizing: border-box;
+  color: white;
+}
+
+.thumbnailFile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25px;
+}
+
+.plusIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plusIcon i {
+  font-size: 18px;
+  color: white;
+}
+
+.thumbnail:hover,
+.thumbnail.active,
+.plusIcon:hover,
+.thumbnailFile:hover,
+.thumbnailFile.active {
+  opacity: 1;
+  border: 2px solid #1e90ff;
+}

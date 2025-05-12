@@ -1,6 +1,6 @@
 // redux/slices/userSlice.js
 import { createSlice } from '@reduxjs/toolkit';
-import { addAuthUser, fetchAllUsers, fetchUserFromToken, login, register, verifyUser } from '../thunks/userThunks';
+import { addAuthUser, fetchAllUsers, fetchUserFromToken, login, register, sendOtpHandler, verifyOtpHandler, verifyUser } from '../thunks/userThunks';
 
 const initialState = {
   user: null,
@@ -119,6 +119,32 @@ const userSlice = createSlice({
         state.users = action.payload;
       })
       .addCase(fetchAllUsers.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+
+      //Send Otp using Firebase
+      .addCase(sendOtpHandler.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(sendOtpHandler.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+      })
+      .addCase(sendOtpHandler.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+
+      //Verify Otp using Firebase
+      .addCase(verifyOtpHandler.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(verifyOtpHandler.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+      })
+      .addCase(verifyOtpHandler.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       })

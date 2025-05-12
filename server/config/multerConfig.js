@@ -8,17 +8,27 @@ const storage = new GridFsStorage({
   url: process.env.MONGO_URI,
   options: { useNewUrlParser: true, useUnifiedTopology: true },
   file: (req, file) => {
-    const match = ["image/png", "image/jpeg", "image/jpg", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"];
+    const match = [
+      "image/png", "image/jpeg", "image/jpg", "application/pdf",
+      "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    ];
 
-    if (match.includes(file.mimetype)) {
-      return {
-        bucketName: "uploads",
-        filename: `${Date.now()}-file-${file.originalname}`,
-      };
+    if (!match.includes(file.mimetype)) return null;
+
+    // Initialize fileIndex if not already
+    if (typeof req.fileIndex === 'undefined') {
+      req.fileIndex = 0;
     }
 
-    // If the file type is not allowed
-    return null;
+    const fileInfo = {
+      bucketName: "uploads",
+      filename: `${Date.now()}-file-${file.originalname}`,
+    };
+
+    req.fileIndex++; // Move to next file
+    return fileInfo;
   },
 });
 

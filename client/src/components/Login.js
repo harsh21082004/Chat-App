@@ -8,7 +8,9 @@ import PhoneInput from 'react-phone-input-2';
 import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useDispatch, useSelector } from 'react-redux';
-import { addAuthUser, login } from '../redux/thunks/userThunks';
+import { addAuthUser, login, sendOtpHandler, verifyOtpHandler } from '../redux/thunks/userThunks';
+import { Rings } from 'react-loader-spinner';
+import BlueButton from './Buttons/BlueButton';
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -24,7 +26,7 @@ const Login = () => {
     otp: '',
   });
 
-  console.log(status)
+  console.log(formData)
 
   useEffect(() => {
     let countdown;
@@ -87,32 +89,27 @@ const Login = () => {
     }
   };
 
-  const sendOtp = async (e) => {
-    e.preventDefault();
-    // configureCaptcha();
 
-    // const appVerifier = window.recaptchaVerifier;
-    // console.log(appVerifier)
+  const sendOtp = async (e) => {
+    e?.preventDefault();
 
     try {
-      // const confirmationResult = await signInWithPhoneNumber(auth, formData.phone, appVerifier);
-      // if (confirmationResult) {
-      //   window.confirmationResult = confirmationResult;
-      //   console.log("OTP sent");
-      const resultAction = await dispatch(addAuthUser({ phone: formData.phone }));
-      console.log(resultAction);
+      const result = await dispatch(sendOtpHandler({ phone: formData.phone, configureCaptcha }));
 
-      if (addAuthUser.fulfilled.match(resultAction)) {
-        setStep('otp');
-        setVerifying(true)
-        setTimer(30);
-        setCanResend(false);
+      if (sendOtpHandler.fulfilled.match(result)) {
+        const authUserAction = await dispatch(addAuthUser({ phone: formData.phone }));
+        if (addAuthUser.fulfilled.match(authUserAction)) {
+          console.log("OTP Sent");
+          setStep('otp');
+          setVerifying(true);
+          setTimer(30);
+          setCanResend(false);
+        }
       } else {
-        console.log("❌ Error:", resultAction.payload);
+        console.log("❌ Redux Error:", result.payload);
       }
-      // }
-    } catch (error) {
-      console.error("OTP error:", error);
+    } catch (err) {
+      console.log("❌ Local Error:", err);
     }
   };
 
@@ -122,47 +119,34 @@ const Login = () => {
     }
   }, [verifying])
 
-  const verifyOtp = async () => {
-    // const confirmationResult = window.confirmationResult;
-    // if (confirmationResult) {
-    // try {
-    // const result = await confirmationResult.confirm(formData.otp);
-    // const phoneNumber = result.user.phoneNumber;
-    const phoneNumber = formData.phone;
-    // console.log(phoneNumber)
 
-    // // Call backend to login
-    // if (!phoneNumber) {
-    //   console.log("Error Verifying OTP")
-    //   return
-    // }
+  const verifyOtp = async (e) => {
+    const resultVerifyAction = await dispatch(verifyOtpHandler({ otp: formData.otp }));
 
-    try {
-      const resultAction = await dispatch(login({ phone: phoneNumber }));
-      console.log(resultAction);
+    if (verifyOtpHandler.fulfilled.match(resultVerifyAction)) {
+      try {
+        const resultAction = await dispatch(login({ phone: resultVerifyAction?.payload }));
 
-      if (login.fulfilled.match(resultAction)) {
-        console.log(resultAction.payload);
-        localStorage.setItem('token', resultAction.payload.token);
-        const decoded = jwtDecode(resultAction.payload.user);
-        if (decoded.isVerified) {
-          setVerifying(false);
-          localStorage.setItem('user', resultAction.payload.user);
-          setTimeout(() => {
-            window.location.href = '/';
-          }, 2000);
+        if (login.fulfilled.match(resultAction)) {
+          console.log(resultAction.payload);
+          localStorage.setItem('token', resultAction.payload.token);
+          const decoded = jwtDecode(resultAction.payload.user);
+          if (decoded.isVerified) {
+            setVerifying(false);
+            localStorage.setItem('user', resultAction.payload.user);
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 2000);
+          }
         }
+      } catch (error) {
+        console.error('Error verifying OTP:', error);
       }
-    } catch (error) {
-      console.error('Error verifying OTP:', error);
     }
+
     setIsVerified(true);
     setVerifying(false);
-    // } catch (error) {
-    //   console.error('OTP verification failed:', error);
-    // }
-    // }
-  };
+  }
 
   return (
     <div className={`${styles.registerForm} container mt-5`}>
@@ -191,9 +175,7 @@ const Login = () => {
                       className={`${styles.phoneInput}`}
                     />
                   </div>
-                  <div className={`${styles.btn} my-2`}>
-                    <span onClick={sendOtp}>Send OTP</span>
-                  </div>
+                  <BlueButton type={'submit'} text={'Send OTP'} submit={sendOtp} />
                 </>
               )}
             </>
@@ -202,7 +184,7 @@ const Login = () => {
           {step === 'otp' && (
             <>
               <h4>Enter OTP</h4>
-              <div className={`${styles.input} ${styles.otpInput}`}>
+              <form onSubmit={verifyOtp} className={`${styles.input} ${styles.otpInput}`}>
                 <OtpInput
                   value={formData.otp}
                   onChange={handleOtpChange}
@@ -228,10 +210,8 @@ const Login = () => {
                     </span>
                   )}
                 </li>
-              </div>
-              <div className={`${styles.btn} my-2`}>
-                <span onClick={verifyOtp}>Verify OTP</span>
-              </div>
+              </form>
+              <BlueButton type={'submit'} text={'Verify OTP'} submit={verifyOtp} />
             </>
           )}
         </form>

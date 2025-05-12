@@ -11,17 +11,28 @@ exports.sendMessage = async (req, res) => {
     receiverId,
     content,
     messageType,
+    caption
   } = req.body;
 
   try {
-    // Handle uploaded files
-    const filesMeta = req.files?.map(file => ({
-      filename: file.filename,
-      fileType: file.mimetype,
-      fileSize: file.size,
-      url: `/api/chat/files/${file.filename}`, // adjust this as per your download route
-      filecaption: '', // Optional: Add UI support for caption later
-    })) || [];
+
+    console.log('Incoming Captions:', req.body);
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('caption')) {
+        console.log(`${key}: ${req.body[key]}`);
+      }
+    });
+
+    const filesMeta = req.files?.map((file, index) => {
+      const fileCaption = Array.isArray(caption) ? caption[index] : caption; // support both string and array
+      return {
+        filename: file.filename,
+        fileType: file.mimetype,
+        fileSize: file.size,
+        url: `/api/chat/files/${file.filename}`,
+        filecaption: fileCaption || '',
+      };
+    }) || [];
 
     const newMessage = {
       senderId,
@@ -32,11 +43,11 @@ exports.sendMessage = async (req, res) => {
       timestamp: new Date(),
     };
 
-    // Find existing chat
+    console.log(newMessage)
+
     let chat = await Chat.findOne({ conversationId });
 
     if (!chat) {
-      // If chat doesn't exist, create it
       chat = new Chat({
         conversationId,
         messages: [newMessage],
@@ -52,6 +63,7 @@ exports.sendMessage = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 
 

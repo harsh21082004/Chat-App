@@ -6,7 +6,6 @@ import axios from "axios";
 export const sendMessage = createAsyncThunk(
     "chat/sendMessage",
     async (messageData, thunkAPI) => {
-      console.log(messageData)
       try{
         const response = await axios.post(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/chat/send-message`, messageData);
         return response.data;
