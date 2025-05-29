@@ -14,8 +14,11 @@ exports.getImage = async (req, res) => {
       return res.status(500).json({ message: "GridFSBucket is not initialized" });
     }
 
-    const fileCollection = mongoose.connection.db.collection("fs.files"); // Ensure this matches your bucket
+    console.log(req.params)
+
+    const fileCollection = mongoose.connection.db.collection("uploads.files"); // Ensure this matches your bucket
     const file = await fileCollection.findOne({ filename: req.params.filename });
+    console.log(file)
 
     if (!file) {
       return res.status(404).json({ message: "File not found" });
