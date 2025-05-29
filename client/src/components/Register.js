@@ -285,7 +285,7 @@ const Register = () => {
                       Accept terms and conditions
                     </label>
                   </div>
-                  <BlueButton text={'Create Account'} submit={sendOtp}/>
+                  <BlueButton text={'Create Account'} submit={handleRegister}/>
                 </>
               )}
             </>
