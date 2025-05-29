@@ -4,7 +4,7 @@ let gridFsBucket;
 
 mongoose.connection.once("open", () => {
   gridFsBucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
-    bucketName: "fs", // Updated to match your actual bucket name
+    bucketName: "uploads", // Updated to match your actual bucket name
   });
 });
 
