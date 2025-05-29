@@ -15,22 +15,29 @@ const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+]
+
 
 // Connect to MongoDB
 connectDB();
 
-// Middleware
-app.use(cors());
 
 
-// Explicitly handle preflight requests
-// app.options('*', (req, res) => {
-//   res.setHeader('Access-Control-Allow-Origin', 'https://biz-convo-app.vercel.app'); // Update with your frontend URL
-//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-//   res.setHeader('Access-Control-Allow-Credentials', 'true');
-//   res.sendStatus(204);
-// });
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}
+
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 

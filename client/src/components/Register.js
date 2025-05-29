@@ -49,7 +49,6 @@ const Register = () => {
 
       // Check if the token has expired
       const currentTime = Date.now() / 1000; // Convert to seconds
-      console.log(decodedToken.exp, currentTime);
       if (decodedToken.exp < currentTime) {
         // Token has expired, remove it from localStorage
         localStorage.removeItem('user');
@@ -101,7 +100,6 @@ const Register = () => {
     }));
   };
 
-  console.log(formData)
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -110,7 +108,6 @@ const Register = () => {
       // User is verified, proceed with registration
       try {
         const resultAction = await dispatch(register({ formData }));
-        console.log(resultAction);
 
         if (register.fulfilled.match(resultAction)) {
           localStorage.setItem('token', resultAction.payload.token);
@@ -156,10 +153,7 @@ const Register = () => {
     // const confirmationResult = await signInWithPhoneNumber(auth, formData.phone, appVerifier);
     // if (confirmationResult) {
     //   window.confirmationResult = confirmationResult;
-    console.log("OTP sent");
     const resultAction = await dispatch(addAuthUser({ phone: formData.phone }));
-    console.log(resultAction);
-
     if (addAuthUser.fulfilled.match(resultAction)) {
       setStep('otp');
       setVerifying(true)
@@ -185,7 +179,6 @@ const Register = () => {
   };
 
 
-  console.log(isVerified, verifying)
 
   useEffect(() => {
     if (verifying) {
@@ -202,7 +195,6 @@ const Register = () => {
     const phone = formData.phone;
 
     const resultAction = await dispatch(verifyUser({ phone }))
-    console.log(resultAction)
 
     if (verifyUser.fulfilled.match(resultAction)) {
       setIsVerified(true);

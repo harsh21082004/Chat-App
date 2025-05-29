@@ -19,7 +19,6 @@ const App = () => {
         }
     };
 
-    console.log(user)
 
 
 

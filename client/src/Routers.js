@@ -10,11 +10,9 @@ const Routers = () => {
     const dispatch = useDispatch();
     const {isLoggedIn, user} = useSelector((state) => state.user);
 
-    console.log(user)
 
     const location = useLocation();
     const navigate = useNavigate();
-    console.log(isLoggedIn, user)
 
     // // Redirect based on login status
     useEffect(() => {
@@ -22,7 +20,7 @@ const Routers = () => {
 
         if (token && (location.pathname === '/login' || location.pathname === '/register')) {
             navigate('/', { replace : true}); // Redirect to home if logged in and accessing login/register
-        } else if (!token && (location.pathname !== '/login' || location.pathname !== '/register')) {
+        } else if ((!token && location.pathname !== '/login') && ( !token && location.pathname !== '/register')) {
             navigate('/login', { replace : true}); // Redirect to login if not logged in and accessing protected routes
         }
     }, [isLoggedIn, location, navigate]);

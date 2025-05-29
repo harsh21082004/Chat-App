@@ -22,7 +22,6 @@ const NewChatModel = () => {
         }
     }, [users, user]);
 
-    console.log(chatPerson)
 
     const handleAddChat = (selectedUser) => async () => {
         dispatch(setChatPerson(selectedUser));

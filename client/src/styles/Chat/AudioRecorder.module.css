@@ -1,0 +1,62 @@
+
+
+.voiceRecorder {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    border-radius: 8px;
+    width: 100%;
+    transition: all 0.5s;
+    max-height: 50px;
+}
+
+.waveform {
+  display: flex;
+  gap: 1px;
+  flex-direction: row-reverse;
+  align-items: center;
+  height: 50px;
+  overflow: hidden;
+  height: 70px;
+  max-width: 200px;
+}
+
+.voiceRecorder i{
+    font-size: 20px;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.voiceRecorder span{
+    color: white;
+    font-size: 18px;
+}
+
+.mic, .pause{
+    font-size: 20px;
+    color: #ad1d86;
+    cursor: pointer;
+    animation: bubble 0.5s ease-in-out;
+}
+
+.trash{
+    font-size: 20px;
+    color: #bc1c1c;
+    cursor: pointer;
+}
+
+
+.sendButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}

@@ -34,7 +34,6 @@ exports.register = async (req, res) => {
 
     if (req.file) {
       fileUrl = `/api/auth/file/${req.file.filename}`;
-      console.log(fileUrl);
     }
 
     // Check if user exists in UserData
@@ -62,7 +61,6 @@ exports.register = async (req, res) => {
 
     // Create new UserData entry
     const userData = new UserData({ name, email, profilePhoto: fileUrl, phone });
-    console.log(userData);
     await userData.save();
 
     // Sign JWT for userData details
