@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import styles from '../styles/Register.module.css';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import { jwtDecode } from 'jwt-decode'; // Import jwt-decode
 import OtpInput from 'react-otp-input';
 import PhoneInput from 'react-phone-input-2';
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { RecaptchaVerifier } from 'firebase/auth';
 import { auth } from '../firebase';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { addAuthUser, login, sendOtpHandler, verifyOtpHandler } from '../redux/thunks/userThunks';
-import { Rings } from 'react-loader-spinner';
 import BlueButton from './Buttons/BlueButton';
 
 const Login = () => {
   const dispatch = useDispatch();
-  const { status } = useSelector((state) => state.user);
   const [isVerified, setIsVerified] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [step, setStep] = useState('phone');
@@ -26,7 +23,6 @@ const Login = () => {
     otp: '',
   });
 
-  console.log(formData)
 
   useEffect(() => {
     let countdown;
@@ -99,7 +95,6 @@ const Login = () => {
       if (sendOtpHandler.fulfilled.match(result)) {
         const authUserAction = await dispatch(addAuthUser({ phone: formData.phone }));
         if (addAuthUser.fulfilled.match(authUserAction)) {
-          console.log("OTP Sent");
           setStep('otp');
           setVerifying(true);
           setTimer(30);
@@ -128,7 +123,6 @@ const Login = () => {
         const resultAction = await dispatch(login({ phone: resultVerifyAction?.payload }));
 
         if (login.fulfilled.match(resultAction)) {
-          console.log(resultAction.payload);
           localStorage.setItem('token', resultAction.payload.token);
           const decoded = jwtDecode(resultAction.payload.user);
           if (decoded.isVerified) {

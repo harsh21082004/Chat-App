@@ -96,6 +96,7 @@
     padding: 10px;
     background-color: #18171D;
     border-top: 3px solid #23222A;
+    transition: all 0.5s;
 }
 
 .footer form {
@@ -104,6 +105,7 @@
     width: 100%;
     gap: 20px;
     margin: 0 10px;
+    transition: all 0.5s;
 }
 
 .footer .input {
@@ -113,6 +115,7 @@
     align-items: flex-end;
     gap: 10px;
     width: 100%;
+    transition: all 0.5s;
 }
 
 
@@ -198,375 +201,28 @@
     background-color: #29313d;
 }
 
-/* Chat.module.css */
-
-.message {
-    width: 100%;
-}
-
-.message div {
-    padding: 5px 10px;
-    margin: 2px 5px;
-    min-width: 150px;
-    max-width: 70%;
-    word-wrap: break-word;
-    word-break: break-word;
-    background-color: #f1f1f1;
-    position: relative;
-    padding-right: 70px;
-}
-
-.newMessageLabel {
-    text-align: center;
-    margin: 10px 0;
-    font-weight: bold;
-    color: gray;
-}
-
-.newMessageLabel span {
-    color: gray;
-    font-size: 14px;
-    background: #2e2a41;
-    padding: 7px 10px;
-    border-radius: 20px;
+@keyframes bubble {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 
-.messageContent {
-    font-size: 15px;
+.bar {
+  width: 3px;
+  background: #ffffff;
+  margin: 0 1px;
+  max-height: 70px;
+  border-radius: 2px;
+  transition: all 0.3s ease-in-out;
 }
 
-.timestamp {
-    height: 20px;
-    display: flex;
-    align-items: flex-end;
-    font-size: 10px;
-    color: rgb(225, 225, 225);
-    position: absolute;
-    bottom: 5px;
-    right: 35px;
-}
-
-.singleTick {
-    height: 20px;
-    display: flex;
-    align-items: flex-end;
-    font-size: 13px;
-    position: absolute;
-    right: 15px;
-    bottom: 7px;
-    color: white;
-    cursor: pointer;
-}
-
-.right div {
-    background-color: #0091ae;
-    align-self: flex-end;
-    border-radius: 10px;
-}
-
-.right.firstMessage .messageContainer {
-    border-top-right-radius: 0 !important;
-    border-top-left-radius: 10px !important;
-    border-bottom-right-radius: 10px !important;
-    border-bottom-left-radius: 10px !important;
-}
-
-.right.firstMessage .messageContainer::before {
-    content: "";
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    background-color: #0091ae;
-    top: 0;
-    right: -15px;
-}
-
-.right.firstMessage .messageContainer::after {
-    content: "";
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    background-color: #18171D;
-    top: 0;
-    right: -15px;
-    border-top-left-radius: 12px;
-}
-
-
-.left.firstMessage .messageContainer, .left.firstMessage .chatFile {
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 10px !important;
-    border-bottom-right-radius: 10px !important;
-    border-bottom-left-radius: 10px !important;
-}
-
-.left.firstMessage .messageContainer::before, .left.firstMessage .chatFile::before {
-    content: "";
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    background-color: #21212F;
-    top: 0;
-    left: -15px;
-}
-
-.left.firstMessage .messageContainer::after, .left.firstMessage .chatFile::after {
-    content: "";
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    background-color: #18171D;
-    top: 0;
-    left: -15px;
-    border-top-right-radius: 12px;
-}
-
-.right {
-    display: flex;
-    justify-content: flex-end;
-    position: relative;
-}
-
-.left {
-    display: flex;
-    position: relative;
-    justify-content: flex-start;
-}
-
-.left div {
-    background-color: #21212F;
-    align-self: flex-start;
-    border-radius: 10px;
-}
-
-.imageMessage div {
-    padding: 3px !important;
-    width: 309px;
-    height: 309px;
-}
-
-.chatFile {
-    margin: 1px;
-    max-width: 309px !important;
-    width: 309px !important;
-    max-height: 155px !important;
-    padding: 3px !important;
-    position: relative;
-}
-
-
-.chatImageWithCaption, .fileWithCaption{
-    margin: 1px;
-    max-width: 309px !important;
-    width: 309px !important;
-    max-height: 100%;
-    padding: 3px !important;
-    position: relative;
-}
-
-.fileWithCaption .fileDetails{
-    margin-bottom: 0 !important;
-}
-
-.fileWithCaption .messageContent{
-    margin-bottom: 20px;
-}
-
-.chatFile .fileDetails {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    width: calc(100%) !important;
-    max-width: calc(100%) !important;
-    max-height: 90%;
-    height: 90% !important;
-    padding: 15px 10px !important;
-    box-sizing: border-box;
-    margin: 0 ;
-    margin-bottom: 20px;
-}
-
-.chatFile .fileDetails .fileLeft {
-    display: flex;
-    justify-content: flex-start;
-    gap: 10px;
-    background: transparent !important;
-}
-
-.fileDetails i {
-    position: static !important;
-    font-size: 40px !important;
-}
-
-.fileDetails a i {
-    position: static !important;
-    font-size: 20px !important;
-    margin-top: 10px;
-    color: white;
-}
-
-
-.chatFile .fileDetails .aboutFile {
-    background: transparent;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-.right .chatFile .fileDetails {
-    background-color: #006377;
-}
-
-.left .chatFile .fileDetails {
-    background-color: #191923;
-}
-
-.imageMessage div .filesContent {
-    display: grid;
-    max-width: 100%;
-    height: 100%;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1.5px;
-    padding: 0 !important;
-    margin-top: 5px;
-    padding-right: 0 !important;
-    margin: 0 !important;
-}
-
-.imageMessage div .filesContent .fileWrapper {
-    max-width: 150px;
-    max-height: 150px;
-    word-break: break-word;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: hidden;
-}
-
-.imageMessage div .filesContent .fileWrapper .chatImage {
-    max-width: 100%;
-    max-height: 100%;
-    width: 150px;
-    height: 150px;
-    border-radius: 8px;
-    margin: 0 !important;
-    object-fit: cover;
-}
-
-.imageMessage div .files1 .fileWrapper .chatImage {
-    width: 100%;
-    height: 100%;
-}
-
-/* Container remains square */
-.imageMessage div .filesContent {
-    width: 303px;
-    height: 303px;
-    display: grid;
-    gap: 1.5px;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* One file: full area */
-
-.imageMessage div .files1 {
-    width: 100%;
-    height: 100%;
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
-}
-
-.imageMessage div .files1 .fileWrapper {
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-}
-
-.imageMessage div .files2 {
-    width: 100%;
-    height: 100%;
-    grid-template-columns: 1fr 1fr;
-}
-
-.imageMessage div .files2 .fileWrapper {
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-}
-
-.imageMessage div .filesmore {
-    width: 100%;
-    height: 100%;
-}
-
-.imageMessage div .filesmore .fileWrapper:nth-of-type(n + 5) {
-    display: none;
-}
-
-.imageMessage div .filesmore .fileWrapper:nth-child(4) {
-    content: "";
-    position: relative;
-}
-
-.imageMessage div .filesmore .fileWrapper:nth-child(4)::after {
-    content: "";
-    position: absolute;
-    background-color: #444444;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    border-radius: 8px;
-    opacity: 0.6;
-}
-
-.moreImages {
-    position: absolute;
-    bottom: 60px;
-    right: 60px;
-    font-size: 20px;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-
-.imageMessage div .files2 .fileWrapper .chatImage {
-    width: 100%;
-    height: 100%;
-}
-
-
-/* Individual file box */
-.fileWrapper {
-    width: 100%;
-    height: 100%;
-}
-
-/* Image styling */
-.chatImage {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 8px;
-}
-
-
-.filename {
-    font-size: 14px;
-    font-weight: 500;
-    margin: 0;
-}
-
-.fileSize {
-    font-size: 12px;
-    color: gray;
-    margin: 0;
-}
 
 
 @media screen and (max-width:760px) {

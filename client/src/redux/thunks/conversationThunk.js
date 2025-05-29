@@ -26,12 +26,10 @@ export const addConversation = createAsyncThunk(
 export const getConversations = createAsyncThunk(
   "conversation/getConversations",
   async (userId, thunkAPI) => {
-    console.log(userId)
     try {
       const response = await axios.get(
         `${process.env.REACT_APP_BACKEND_BASE_URL}/api/conversation/get/${userId}`
       );
-      console.log(response)
       return response.data; // should be an array of conversations
     } catch (error) {
       return thunkAPI.rejectWithValue(

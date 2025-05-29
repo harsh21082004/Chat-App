@@ -7,14 +7,12 @@ import { auth } from '../../firebase';
 export const fetchUserFromToken = createAsyncThunk(
   'user/fetchUser',
   async (token, { rejectWithValue }) => {
-    console.log(token)
     try {
       const res = await axios.get(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/auth/get-user`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      console.log(res.data)
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response.data);
@@ -42,7 +40,6 @@ export const register = createAsyncThunk(
 export const addAuthUser = createAsyncThunk(
   'user/addAuthUser',
   async (userData, thunkAPI) => {
-    console.log(userData)
     try {
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/auth/add-auth-user`, userData);
       return response.data;
@@ -67,7 +64,6 @@ export const verifyUser = createAsyncThunk(
 export const login = createAsyncThunk(
   'user/login',
   async (userData, thunkAPI) => {
-    console.log(userData)
     try {
       const response = await axios.post(`${process.env.REACT_APP_BACKEND_BASE_URL}/api/auth/login`, { phone: userData.phone });
       return response.data;
@@ -96,7 +92,6 @@ export const fetchAllUsers = createAsyncThunk(
 export const sendOtpHandler = createAsyncThunk(
   'user/sendOtp',
   async ({ phone, configureCaptcha }, thunkAPI) => {
-    console.log(phone)
     try {
       // Configure Recaptcha
       configureCaptcha()
@@ -106,7 +101,6 @@ export const sendOtpHandler = createAsyncThunk(
 
       if (confirmationResult) {
         window.confirmationResult = confirmationResult;
-        console.log("OTP sent");
       }
 
       return { phone };
@@ -120,13 +114,10 @@ export const sendOtpHandler = createAsyncThunk(
 export const verifyOtpHandler = createAsyncThunk(
   'user/verifyOtp',
   async ({otp}, thunkAPI) => {
-    console.log(otp)
     try {
       const confirmationResult = window.confirmationResult;
-      console.log(confirmationResult)
       if (confirmationResult) {
         const result = await confirmationResult.confirm(otp);
-        console.log(result)
         const phoneNumber = result.user.phoneNumber;
         return phoneNumber;
       }

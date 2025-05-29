@@ -16,12 +16,9 @@ const Conversations = () => {
     const [searchTerm, setSearchTerm] = useState('');
 
 
-    console.log(user)
 
     useEffect(() => {
-        console.log('Fetching conversations...');
         // if (!conversationState.fetched) {
-            console.log('Fetching conversations...');
             dispatch(getConversations(user?._id));
         // }
     }, [dispatch, conversationState.fetched, user]);
@@ -40,12 +37,10 @@ const Conversations = () => {
             )
         })
 
-        console.log(conversation)
         const resultAction = await dispatch(markAsSeen(conversation._id));
-        console.log(resultAction);
 
         if (markAsSeen.fulfilled.match(resultAction)) {
-            console.log(resultAction.payload);
+            // console.log(resultAction.payload);
         }
     };
 

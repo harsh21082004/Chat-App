@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styles from '../styles/Chat.module.css';
 import { Link } from 'react-router-dom';
-import { setNewMessage, setMessages } from '../redux/slices/chatSlice';
+import { setNewMessage, setMessages, setHasMoreMessages, setMessagePage } from '../redux/slices/chatSlice';
 import { addConversation, getConversations } from '../redux/thunks/conversationThunk';
 import { sendMessage, getMessages } from '../redux/thunks/chatThunks';
 import ImageViewer from './ImageViewer';
@@ -10,6 +10,14 @@ import FilePreviewer from './FilePreviewer';
 import TextOrImageMessage from './Chat/TextOrImageMessage';
 import ImageWithFileCaption from './Chat/ImageWithFileCaption';
 import OtherFiles from './Chat/OtherFiles';
+import AudioPlayer from './Chat/AudioPlayer';
+import VideoMessage from './Chat/VideoMessage';
+import AudioRecorder from './Chat/AudioRecorder';
+import VideoViewer from './VideoViewer';
+import ChatSkeleton from './Chat/ChatSkeleton';
+import ChatLoading from './Chat/ChatLoading';
+import DisplayDay from './Chat/DisplayDay';
+import VideoWithFileCaption from './Chat/VideoWithFileCaption';
 
 const Chat = () => {
   const dispatch = useDispatch();
@@ -21,9 +29,35 @@ const Chat = () => {
   const [file, setFile] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0); // ✅ Defined
   const [isImageOpened, setIsImageOpened] = useState(false);
+  const [isVideoOpened, setIsVideoOpened] = useState(false);
+  const [videoIndex, setVideoIndex] = useState(0);
+  const [videoUrl, setVideoUrl] = useState('');
   const [imageIndex, setImageIndex] = useState(0);
   const [imageUrl, setImageUrl] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [recorder, setRecorder] = useState(null);
+  const [intervalId, setIntervalId] = useState(null);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState('');
+  const [audioContext, setAudioContext] = useState(null);
+  const [analyser, setAnalyser] = useState(null);
+  const [dataArray, setDataArray] = useState(new Array(60).fill(0));
+  const [mediaStream, setMediaStream] = useState(null); // add this to your state
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+
+
+
+
+  const recordedChunks = useRef([]);
+  const animationRef = useRef(null);
+  const isRecordingRef = useRef(false);
+  const isPausedRef = useRef(false);
+
+
   const scrollRef = useRef(null);
   const newMessageLabelRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -42,12 +76,213 @@ const Chat = () => {
   }, [message]);
 
   const toggleImageView = (imageIndex, file) => {
-    console.log(imageIndex, file)
     setImageUrl(file?.url);
     setImageIndex(imageIndex);
     setIsImageOpened(!isImageOpened);
   };
 
+  const toggleVideoView = (videoIndex, file) => {
+    setVideoUrl(file?.url);
+    setVideoIndex(videoIndex);
+    setIsVideoOpened(!isVideoOpened);
+  };
+
+
+
+  let frameCount = 0;
+
+  const updateWaveform = (analyserNode, timeData) => {
+    if (!analyserNode || !isRecordingRef.current || isPausedRef.current) return;
+
+    analyserNode.getByteTimeDomainData(timeData);
+
+
+    // Convert to -1 to 1 and take absolute value
+    const normalizedData = [...timeData].map(v => Math.abs((v - 128) / 64));
+
+    // Use a single sample or average to plot one bar
+    const avgAmplitude = normalizedData.reduce((a, b) => a + b, 0) / normalizedData.length;
+
+    const maxBarHeight = 50;
+    const scaledHeight = avgAmplitude * maxBarHeight * 2;
+
+    frameCount++;
+    if (frameCount % 6 === 0) {
+      setDataArray((prev) => [...prev.slice(1), scaledHeight]);
+    }
+
+    animationRef.current = requestAnimationFrame(() =>
+      updateWaveform(analyserNode, timeData)
+    );
+  };
+
+
+  //set audio Url and audioBlob
+  const startRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    setMediaStream(stream);
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const newRecorder = new MediaRecorder(stream);
+    recordedChunks.current = []; // ✅ Reset before starting
+    newRecorder.start();
+
+    newRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        recordedChunks.current.push(e.data); // ✅ Save each chunk
+      }
+    };
+
+    const source = audioCtx.createMediaStreamSource(stream);
+
+    const compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-50, audioCtx.currentTime);
+    compressor.knee.setValueAtTime(40, audioCtx.currentTime);
+    compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+    compressor.attack.setValueAtTime(0, audioCtx.currentTime);
+    compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+
+    const analyserNode = audioCtx.createAnalyser();
+    analyserNode.fftSize = 1024;
+    analyserNode.smoothingTimeConstant = 0.8;
+
+    source.connect(compressor);
+    compressor.connect(analyserNode);
+
+    const bufferLength = analyserNode.fftSize;
+    const timeData = new Uint8Array(bufferLength);
+
+    setAudioContext(audioCtx);
+    setAnalyser(analyserNode);
+    setRecorder(newRecorder);
+    setIsRecording(true);
+
+    isRecordingRef.current = true;
+    isPausedRef.current = false;
+
+    animationRef.current = requestAnimationFrame(() =>
+      updateWaveform(analyserNode, timeData)
+    );
+
+    const id = setInterval(() => {
+      setRecordingTime((prev) => prev + 1);
+    }, 1000);
+    setIntervalId(id);
+  };
+
+
+
+
+
+
+  const pauseRecording = () => {
+    if (recorder && recorder.state === 'recording') {
+      recorder.pause();
+      isPausedRef.current = true;
+      setIsPaused(true);
+      clearInterval(intervalId);
+    }
+  };
+
+  const togglePauseRecording = () => {
+    if (isPaused) {
+      resumeRecording();
+    } else {
+      pauseRecording();
+    }
+  }
+
+
+  const resumeRecording = () => {
+    if (recorder && recorder.state === 'paused') {
+      recorder.resume();
+      isPausedRef.current = false;
+      setIsPaused(false);
+
+      const id = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+      setIntervalId(id);
+
+      if (analyser) {
+        const freqData = new Uint8Array(analyser.frequencyBinCount);
+        animationRef.current = requestAnimationFrame(() =>
+          updateWaveform(analyser, freqData)
+        );
+      }
+    }
+  };
+
+
+  const stopMediaStream = () => {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach((track) => track.stop()); // ⛔️ this stops the mic
+      setMediaStream(null);
+    }
+  };
+
+  const stopRecording = () => {
+    return new Promise((resolve) => {
+      if (recorder && recorder.state !== 'inactive') {
+        recorder.onstop = () => {
+          const blob = new Blob(recordedChunks.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          setAudioBlob(blob);
+          setAudioUrl(url);
+          resolve(blob);
+        };
+        recorder.stop();
+      } else {
+        resolve(null);
+      }
+
+      clearInterval(intervalId);
+      setIsRecording(false);
+      setRecordingTime(0);
+      isRecordingRef.current = false;
+      isPausedRef.current = false;
+
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+
+      stopMediaStream();
+    });
+  };
+
+
+
+  const cancelRecording = () => {
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+    clearInterval(intervalId);
+    setIsRecording(false);
+    setRecordingTime(0);
+    setAudioBlob(null);
+    setAudioUrl('');
+
+    isRecordingRef.current = false;
+    isPausedRef.current = false;
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+
+    stopMediaStream(); // ⛔️ stop mic
+  };
+
+
+  const handleScroll = (e) => {
+    const top = e.target.scrollTop;
+
+    if (top === 0 && chatState.hasMoreMessages && !isFetchingMore) {
+      setIsFetchingMore(true);
+      dispatch(setMessagePage(chatState.messagePage + 1));
+    }
+  };
 
 
 
@@ -55,37 +290,53 @@ const Chat = () => {
     const fetchMessages = async () => {
       if (!chatPerson?._id || !user?._id) return;
 
-      try {
-        let conversation = conversationState.conversations.find(convo => {
-          return (
-            (convo.senderId._id === user._id && convo.receiverId._id === chatPerson._id) ||
-            (convo.receiverId._id === user._id && convo.senderId._id === chatPerson._id)
-          );
-        });
+      let conversation = conversationState.conversations.find(convo => (
+        (convo.senderId._id === user._id && convo.receiverId._id === chatPerson._id) ||
+        (convo.receiverId._id === user._id && convo.senderId._id === chatPerson._id)
+      ));
 
-        if (!conversation) return;
+      if (!conversation) return;
 
-        const result = await dispatch(getMessages(conversation._id));
+      const result = await dispatch(getMessages({
+        conversationId: conversation._id,
+        page: chatState.messagePage,
+        limit: chatState.limit,
+      }));
 
-        if (getMessages.fulfilled.match(result)) {
-          const messages = result.payload.messages;
-          if (conversation.seen?.receiver?.userId === user._id) {
-            setUnreadCount(conversation.seen.receiver.unreadCount);
-          } else {
-            setUnreadCount(0); // Sender should not see unread count
-          }
+      if (getMessages.fulfilled.match(result)) {
+        const { messages, hasMore } = result.payload;
 
-          dispatch(setMessages({ messages, conversationId: conversation._id }));
-        } else {
-          console.error('Failed to load messages:', result.error.message);
+        dispatch(setMessages({
+          messages,
+          conversationId: conversation._id,
+          append: chatState.messagePage > 0,
+        }));
+
+        if (hasMore > 0) {
+          dispatch(setHasMoreMessages(hasMore));
         }
-      } catch (error) {
-        console.error('Error fetching messages:', error);
+
+        // Wait for DOM to update
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            // Scroll down just slightly to allow next scrollTop === 0 trigger
+            chatContainerRef.current.scrollTop = 1;
+          }
+        }, 0);
+
+      } else {
+        console.error('Failed to load messages:', result.error.message);
       }
+
+      setIsFetchingMore(false);
     };
 
     fetchMessages();
-  }, [chatPerson, user, dispatch, conversationState.conversations, unreadCount]);
+  }, [chatPerson, user, chatState.messagePage]);
+
+
+
+
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -103,13 +354,20 @@ const Chat = () => {
         container.scrollTop = container.scrollHeight;
       }
     }
-  }, [chatState.messages, unreadCount]);
+  }, [chatState.newMessage]);
 
 
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!message && !file) return;
+    const blob = await stopRecording();
+
+    if (!blob && !message && !file) {
+      console.error("Audio blob is null");
+      return;
+    }
+    if (!message && !file && !blob) return;
+
 
     try {
       dispatch(setNewMessage(message));
@@ -117,7 +375,7 @@ const Chat = () => {
       const conversationData = {
         senderId: user._id,
         receiverId: chatPerson._id,
-        lastMessage: file ? 'Sent a file' : message,
+        lastMessage: file || audioBlob ? 'Sent a file' : message,
         lastMessageTimestamp: Date.now(),
       };
 
@@ -136,6 +394,13 @@ const Chat = () => {
           msgPayload.append('senderId', user._id);
           msgPayload.append('receiverId', chatPerson._id);
           msgPayload.append('messageType', 'file');
+        } else if (blob) {
+          msgPayload.append('files', blob);
+          msgPayload.append('conversationId', conversationId)
+          msgPayload.append('messageType', 'audio');
+          msgPayload.append('senderId', user._id)
+          msgPayload.append('receiverId', chatPerson._id);
+          msgPayload.append('filecaption', '',)
         } else {
           msgPayload.append('content', message);
           msgPayload.append('conversationId', conversationId);
@@ -147,7 +412,7 @@ const Chat = () => {
         const msgResult = await dispatch(sendMessage(msgPayload));
 
         if (sendMessage.fulfilled.match(msgResult)) {
-          console.log('Message sent:', msgResult.payload);
+          // console.log('Message sent:', msgResult.payload);
         }
       }
     } catch (err) {
@@ -168,8 +433,6 @@ const Chat = () => {
   const readMessages = messages.slice(0, messages.length - unreadCount);
   const unreadMessages = messages.slice(messages.length - unreadCount);
 
-  console.log(messages)
-
 
 
 
@@ -182,10 +445,46 @@ const Chat = () => {
     }))
   );
 
+  const allVideoFiles = messages.flatMap(msg =>
+    msg.files.map(file => ({
+      ...file,
+      timestamp: msg.timestamp,
+      senderId: msg.senderId,
+      receiverId: msg.receiverId,
+    }))
+  );
+
   const imageMessages = allImageFiles.filter(
     (msg) =>
       msg.fileType.startsWith('image/')
   );
+
+  const videoMessages = allVideoFiles.filter(
+    (msg) =>
+      msg.fileType.startsWith('video/')
+  );
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(1, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const iconRef = useRef(null);
+
+  useEffect(() => {
+    const el = iconRef.current;
+    if (el) {
+      // Remove and re-add the class to re-trigger animation
+      el.classList.remove('bubble-animation');
+      // Trigger reflow
+      void el.offsetWidth;
+      el.classList.add('bubble-animation');
+    }
+  }, [isPaused]);
+
+  const iconClass = isPaused ? 'fa-solid fa-microphone' : 'fa-regular fa-circle-pause';
+
 
 
   return (
@@ -208,25 +507,38 @@ const Chat = () => {
             </div>
           </div>
 
-          <div className={styles.chatBody} ref={chatContainerRef}>
+          {chatState.messageFetchedStatus !== 'succeeded' ? (<ChatSkeleton />) : (<div className={styles.chatBody} ref={chatContainerRef} onScroll={handleScroll}>
+            {chatState.fetchingMoreStatus === 'loading' && (<ChatLoading />)}
             {readMessages.map((msg, index) => {
               const firstInGroup = isFirstInGroup(readMessages, index);
               const isText = msg.messageType === 'text';
               const hasFiles = msg.files?.length > 0;
 
               const imageFiles = msg.files?.filter(file => file.fileType.startsWith('image/')) || [];
-              const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/')) || [];
+              const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/') && !file.fileType.startsWith('video/') && !file.fileType.startsWith('audio/')) || [];
+              const audioFiles = msg.files?.filter(file => file.fileType.startsWith('audio/')) || [];
+              const videoFiles = msg.files?.filter(file => file.fileType.startsWith('video/')) || [];
 
               const imageFilesWithCaption = imageFiles.filter(file => file.filecaption?.trim() !== '');
+              const videoFilesWithcaption = videoFiles.filter(file => file.filecaption?.trim() !== '');
               const imageFilesWithoutCaption = imageFiles.filter(file => !file.filecaption?.trim());
+              const videoFilesWithoutCaption = videoFiles.filter(file => !file.filecaption?.trim());
 
               const moreImages = imageFilesWithoutCaption.length - 4;
+              const moreVideos = videoFiles.length - 4;
+
 
               return (
                 <>
+
+                  <DisplayDay messages={readMessages} msg={msg} i={index} />
                   {/* Text or Image Grid (if no captions) */}
                   {(isText || imageFiles.filter(file => file.filecaption === '').length > 0) && (
                     <TextOrImageMessage index={index} msg={msg} imageFilesWithoutCaption={imageFilesWithoutCaption} moreImages={moreImages} firstInGroup={firstInGroup} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleImageView={toggleImageView} />
+                  )}
+
+                  {(videoFiles.filter(file => file.filecaption === '').length > 0) && (
+                    <VideoMessage index={index} msg={msg} videoFilesWithoutCaption={videoFilesWithoutCaption} firstInGroup={firstInGroup} moreVideos={moreVideos} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleVideoView={toggleVideoView} />
                   )}
 
                   {/* Images with Captions (rendered separately) */}
@@ -234,6 +546,13 @@ const Chat = () => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     return (
                       <ImageWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleImageView={toggleImageView} msg={msg} />
+                    )
+                  })}
+
+                  {videoFilesWithcaption.length > 0 && videoFilesWithcaption.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    return (
+                      <VideoWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleVideoView={toggleVideoView} msg={msg} />
                     )
                   })}
 
@@ -245,139 +564,148 @@ const Chat = () => {
                       <OtherFiles index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} containsCaption={containsCaption} firstInGroup={firstInGroup} msg={msg} />
                     );
                   })}
+
+                  {audioFiles.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    const containsCaption = file.filecaption?.trim() !== '';
+                    return (
+                      <AudioPlayer file={file} audioUrl={fileUrl} firstInGroup={firstInGroup} msg={msg} index={index} fileIndex={fileIndex} containsCaption={containsCaption} />
+                    );
+                  })}
+
                 </>
               );
             })}
 
+            {unreadCount > 0 && (
+              <div className={styles.newMessageLabel} ref={newMessageLabelRef}>
+                <hr />
+                <span style={{ color: 'gray', fontSize: '14px' }}>{unreadCount} Unread Messages</span>
+                <hr />
+              </div>
+            )}
 
+
+            {chatState.fetchingMoreStatus === 'loading' && (<ChatLoading />)}
             {unreadMessages.map((msg, index) => {
               const firstInGroup = isFirstInGroup(readMessages, index);
               const isText = msg.messageType === 'text';
               const hasFiles = msg.files?.length > 0;
 
               const imageFiles = msg.files?.filter(file => file.fileType.startsWith('image/')) || [];
-              const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/')) || [];
+              const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/') && !file.fileType.startsWith('video/') && !file.fileType.startsWith('audio/')) || [];
+              const audioFiles = msg.files?.filter(file => file.fileType.startsWith('audio/')) || [];
+              const videoFiles = msg.files?.filter(file => file.fileType.startsWith('video/')) || [];
 
-              const moreImages = imageFiles.length - 4;
+              const imageFilesWithCaption = imageFiles.filter(file => file.filecaption?.trim() !== '');
+              const videoFilesWithcaption = videoFiles.filter(file => file.filecaption?.trim() !== '');
+              const imageFilesWithoutCaption = imageFiles.filter(file => !file.filecaption?.trim());
+              const videoFilesWithoutCaption = videoFiles.filter(file => !file.filecaption?.trim());
+
+              const moreImages = imageFilesWithoutCaption.length - 4;
+              const moreVideos = videoFiles.length - 4;
+
 
               return (
                 <>
-                  {/* Text or Image Message Bubble */}
-                  {(isText || imageFiles.length > 0) && (
-                    <div
-                      key={`read-${index}-text-image`}
-                      className={`
-            ${styles.message}
-            ${msg.senderId === user._id ? styles.right : styles.left}
-            ${imageFiles.length > 0 ? styles.imageMessage : ''}
-            ${firstInGroup ? styles.firstMessage : ''}
-          `}
-                      ref={index === readMessages.length - 1 ? scrollRef : null}
-                    >
-                      <div className={`${styles.messageContainer}`}>
-                        {isText && <p className={styles.messageContent}>{msg.content}</p>}
 
-                        {imageFiles.length > 0 && (
-                          <div className={`${styles.filesContent} ${styles[`files${imageFiles.length >= 4 ? 4 : imageFiles.length}`]}`}>
-                            {imageFiles.slice(0, 4).map((file, i) => {
-                              const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
-                              return (
-                                <div key={i} className={styles.fileWrapper}>
-                                  <img src={fileUrl} alt="media" className={styles.chatImage} />
-                                </div>
-                              );
-                            })}
-                            {moreImages > 0 && (
-                              <span className={styles.moreImages}>+{moreImages}</span>
-                            )}
-                          </div>
-                        )}
-
-                        <span className={styles.timestamp}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
-                      </div>
-                    </div>
+                  <DisplayDay messages={readMessages} msg={msg} i={index} />
+                  {/* Text or Image Grid (if no captions) */}
+                  {(isText || imageFiles.filter(file => file.filecaption === '').length > 0) && (
+                    <TextOrImageMessage index={index} msg={msg} imageFilesWithoutCaption={imageFilesWithoutCaption} moreImages={moreImages} firstInGroup={firstInGroup} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleImageView={toggleImageView} />
                   )}
 
-                  {/* Separate Message Bubbles for Each File */}
-                  {otherFiles.map((file, fileIndex) => {
+                  {(videoFiles.filter(file => file.filecaption === '').length > 0) && (
+                    <VideoMessage index={index} msg={msg} videoFilesWithoutCaption={videoFilesWithoutCaption} firstInGroup={firstInGroup} moreVideos={moreVideos} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleVideoView={toggleVideoView} />
+                  )}
+
+                  {/* Images with Captions (rendered separately) */}
+                  {imageFilesWithCaption.length > 0 && imageFilesWithCaption.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     return (
-                      <div
-                        key={`read-${index}-file-${fileIndex}`}
-                        className={`
-              ${styles.message}
-              ${msg.senderId === user._id ? styles.right : styles.left}
-              ${styles.fileType}
-            `}
-                      >
-                        <div className={styles.chatFile}>
-                          <div className={styles.fileDetails}>
-                            <div className={`${styles.fileLeft}`}>
-                              <i className="fa-solid fa-file" style={{ fontSize: '20px', marginRight: '8px' }}></i>
-                              <div className={styles.aboutFile}>
-                                <p className={styles.filename}>{file.filename.split('-')[2]}</p>
-                                <p className={styles.fileSize}>{(file.fileSize / (1024 * 1024)).toFixed(2)} MB</p>
-                              </div>
-                            </div>
-                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
-                              <i className="fa-solid fa-download" style={{ marginLeft: 'auto' }}></i>
-                            </a>
-                          </div>
-                        </div>
-                        <span className={styles.timestamp}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <i className={`fa-solid fa-check ${styles.singleTick}`}></i>
-                      </div>
+                      <ImageWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleImageView={toggleImageView} msg={msg} />
+                    )
+                  })}
+
+                  {videoFilesWithcaption.length > 0 && videoFilesWithcaption.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    return (
+                      <VideoWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleVideoView={toggleVideoView} msg={msg} />
+                    )
+                  })}
+
+                  {/* Other file types */}
+                  {otherFiles.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    const containsCaption = file.filecaption?.trim() !== '';
+                    return (
+                      <OtherFiles index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} containsCaption={containsCaption} firstInGroup={firstInGroup} msg={msg} />
                     );
                   })}
+
+                  {audioFiles.map((file, fileIndex) => {
+                    const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
+                    const containsCaption = file.filecaption?.trim() !== '';
+                    return (
+                      <AudioPlayer file={file} audioUrl={fileUrl} firstInGroup={firstInGroup} msg={msg} index={index} fileIndex={fileIndex} containsCaption={containsCaption} />
+                    );
+                  })}
+
                 </>
               );
             })}
 
-          </div>
+          </div>)}
 
           <div className={styles.footer}>
             <form onSubmit={handleSendMessage}>
               <div className={styles.input}>
-                <label className={styles.attachFile} htmlFor="file"><img src="/attach-file.png" alt="attach" /></label>
-                <textarea
-                  ref={textRef}
-                  placeholder="Type a message"
-                  className={styles.text}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault(); // prevent newline
-                      handleSendMessage(e); // send message
-                    }
-                  }}
-                />
+                {isRecording ? (
+                  // ✅ Show only voice recorder UI
+                  <AudioRecorder dataArray={dataArray} iconRef={iconRef} iconClass={iconClass} isPaused={isPaused} togglePauseRecording={togglePauseRecording} handleSendMessage={handleSendMessage} formatTime={formatTime} recordingTime={recordingTime} cancelRecording={cancelRecording} />
+                ) : (
+                  // ✅ Default message input UI
+                  <>
+                    <label className={styles.attachFile} htmlFor="file">
+                      <img src="/attach-file.png" alt="attach" />
+                    </label>
+                    <textarea
+                      ref={textRef}
+                      placeholder="Type a message"
+                      className={styles.text}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                        }
+                      }}
+                    />
+                    <input
+                      type="file"
+                      id="file"
+                      className={styles.file}
+                      onChange={(e) => {
+                        setFile(e.target.files);
+                        setShowPreview(true);
+                      }}
+                      multiple
+                    />
 
-                <input
-                  type="file"
-                  id="file"
-                  className={styles.file}
-                  onChange={(e) => {
-                    setFile(e.target.files)
-                    setShowPreview(true);
-                  }}
-                  multiple
-                />
-                <div className={styles.footerIcons}>
-                  <img src="/mic.png" alt="mic" />
-                  <div className={styles.sep}></div>
-                  <button type="submit" className={styles.sendButton}>
-                    <img src="/send.png" alt="send" />
-                  </button>
-                </div>
+                    <div className={styles.footerIcons}>
+                      <img src="/mic.png" alt="mic" onClick={startRecording} style={{ cursor: 'pointer' }} />
+                      <div className={styles.sep}></div>
+                      <button type="submit" className={styles.sendButton}>
+                        <img src="/send.png" alt="send" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </form>
           </div>
+
           {showPreview && <FilePreviewer files={file} onClose={() => {
             setFile(null);
             setShowPreview(false)
@@ -391,6 +719,10 @@ const Chat = () => {
       )}
       {isImageOpened && (
         <ImageViewer images={imageMessages} imageUrl={imageUrl} onClose={toggleImageView} chatPerson={chatPerson} />
+      )}
+
+      {isVideoOpened && (
+        <VideoViewer videos={videoMessages} videoUrl={videoUrl} onClose={toggleVideoView} chatPerson={chatPerson} />
       )}
 
     </>

@@ -15,14 +15,7 @@ exports.sendMessage = async (req, res) => {
   } = req.body;
 
   try {
-
-    console.log('Incoming Captions:', req.body);
-    Object.keys(req.body).forEach(key => {
-      if (key.startsWith('caption')) {
-        console.log(`${key}: ${req.body[key]}`);
-      }
-    });
-
+    
     const filesMeta = req.files?.map((file, index) => {
       const fileCaption = Array.isArray(caption) ? caption[index] : caption; // support both string and array
       return {
@@ -70,19 +63,32 @@ exports.sendMessage = async (req, res) => {
 // Get Chat Messages by conversationId
 exports.getMessages = async (req, res) => {
   const { conversationId } = req.params;
+  const page = parseInt(req.query.page) || 0;
+  const limit = parseInt(req.query.limit) || 10;
 
   try {
     const chat = await Chat.findOne({ conversationId });
+
     if (!chat) {
       return res.status(404).json({ message: 'Chat not found' });
     }
 
-    res.status(200).json({ messages: chat.messages });
+    const totalMessages = chat.messages.length;
+    const start = Math.max(totalMessages - (page + 1) * limit, 0);
+    const end = totalMessages - page * limit;
+
+    const paginatedMessages = chat.messages.slice(start, end);
+
+    res.status(200).json({
+      messages: paginatedMessages,
+      hasMore: start > 0,
+    });
   } catch (err) {
     console.error('Error fetching messages:', err.message);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 exports.markAsSeen = async (req, res) => {
   const { conversationId } = req.params;
