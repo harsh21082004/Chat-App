@@ -306,7 +306,7 @@ const Register = () => {
                     />
                   </div>
                   <div className={`${styles.btn} my-2`}>
-                    <span onClick={sendOtp}>Send OTP</span>
+                    <BlueButton text={'Send Otp'} submit={sendOtp}/>
                   </div>
                 </>
               )}
@@ -344,7 +344,7 @@ const Register = () => {
                 </li>
               </div>
               <div className={`${styles.btn} my-2`}>
-                <span onClick={verifyOtp}>Verify OTP</span>
+                <BlueButton text={'Verify Otp'} submit={verifyOtp}/>
               </div>
             </>
           )}
