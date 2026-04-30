@@ -63,7 +63,7 @@ const NewChatModel = () => {
                 {filteredReceivers?.map((u) => (
                     <div className={`${styles.chats}`} key={u._id} onClick={handleAddChat(u)}>
                         <div className={`${styles.profile}`}>
-                            <img src={u.profilePhoto || "/anonymous.png"} alt="profile" />
+                            <img src={`${process.env.REACT_APP_BACKEND_BASE_URL + u?.profilePhoto || "/anonymous.png"}`} alt="profile" />
                             <div className={`${styles.details}`}>
                                 <h3>{u.name}</h3>
                             </div>

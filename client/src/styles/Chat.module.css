@@ -201,6 +201,11 @@
     background-color: #29313d;
 }
 
+.ultron_loader{
+    position: static !important;
+    margin-bottom: 5px;
+}
+
 @keyframes bubble {
   0% {
     transform: scale(1);
@@ -332,4 +337,77 @@
     .text {
         width: calc(100% - 55px);
     }
+}
+
+/* --- Existing Styles --- */
+/* ... keep your existing chat styles ... */
+
+/* --- Markdown Styles --- */
+.markdownBody {
+  font-size: 15px;
+  line-height: 1.6;
+  color: inherit; /* Inherit white/black based on theme */
+  overflow-wrap: break-word;
+}
+
+.markdownBody p {
+  margin-bottom: 10px;
+}
+
+/* Headings */
+.markdownBody h1, .markdownBody h2, .markdownBody h3 {
+  margin-top: 15px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 5px;
+}
+
+/* Inline Code (e.g., `variable`) */
+.inlineCode {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  color: #ff4081; /* Pinkish for code */
+}
+
+/* Links */
+.link {
+  color: #00e5ff;
+  text-decoration: underline;
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  font-size: 0.9em;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.th, .td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.th {
+  background-color: rgba(0, 0, 0, 0.2);
+  font-weight: bold;
+  color: #00e5ff; /* Cyan headers */
+}
+
+.td {
+  color: #e0e0e0;
+}
+
+/* Lists */
+.markdownBody ul, .markdownBody ol {
+  margin-left: 20px;
+  margin-bottom: 10px;
 }

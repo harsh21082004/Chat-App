@@ -1,0 +1,167 @@
+/* --- CONTAINER LAYOUT --- */
+.message {
+    width: 100%;
+    display: flex;
+    margin-bottom: 15px; /* More breathing room for AI chats */
+    position: relative;
+}
+
+.right {
+    justify-content: flex-end;
+}
+
+.left {
+    justify-content: flex-start;
+}
+
+/* --- BUBBLE BASE STYLE --- */
+.messageContainer {
+    position: relative;
+    padding: 8px 10px;
+    margin: 0 10px;
+    border-radius: 12px;
+    font-size: 15px;
+    line-height: 1.6;
+    word-wrap: break-word;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- USER STYLES (Right Side) --- */
+.right .messageContainer {
+    background-color: #0091ae; /* Your App's Blue */
+    color: white;
+    max-width: 70%;
+    border-bottom-right-radius: 2px; /* Subtle tail effect */
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    padding: 2px 10px !important;
+}
+
+/* --- ULTRON STYLES (Left Side - The "Tech" Look) --- */
+.left .messageContainer {
+    background-color: #1e1e2e; /* Darker, IDE-like background */
+    color: #dcdcdc;            /* Softer white text for reading */
+    max-width: 85%;            /* WIDER width for Code Blocks */
+    border-bottom-left-radius: 2px;
+}
+
+/* --- CONTENT AREA --- */
+.messageContent {
+    width: 100%;
+    overflow-x: hidden; /* Prevents horizontal scroll breaking layout */
+}
+
+/* --- MARKDOWN STYLING (Crucial for AI) --- */
+
+/* 1. Code Blocks (Pre/Code) */
+.left .messageContent pre {
+    background-color: #11111b !important; /* Very dark background */
+    border-radius: 6px;
+    padding: 12px;
+    margin: 10px 0;
+    overflow-x: auto; /* Allow code to scroll horizontally */
+    border: 1px solid #444;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9em;
+}
+
+/* 2. Inline Code (e.g. `const x = 1`) */
+.left .messageContent :not(pre) > code {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ff79c6; /* Pink/Purple text for inline code */
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+/* 3. Headings */
+.left .messageContent h1, 
+.left .messageContent h2, 
+.left .messageContent h3 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.left .messageContent h1{
+    font-size: 1.5em;
+}
+
+.left .messageContent h2{
+    font-size: 1em;
+}
+
+/* 4. Tables */
+.left .messageContent table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 0.9em;
+}
+
+.left .messageContent th, 
+.left .messageContent td {
+    padding: 8px 12px;
+    border: 1px solid #444;
+    text-align: left;
+}
+
+.left .messageContent th {
+    background-color: rgba(0, 229, 255, 0.1); /* Slight Cyan tint */
+    color: #00e5ff;
+}
+
+/* 5. Lists */
+.left .messageContent ul, 
+.left .messageContent ol {
+    padding-left: 20px;
+    margin-bottom: 10px;
+}
+
+.left .messageContent li {
+    margin-bottom: 5px;
+}
+
+/* 6. Links */
+.left .messageContent a {
+    color: #00e5ff;
+    text-decoration: underline;
+}
+
+/* --- TIMESTAMP & TICKS --- */
+.timestamp {
+    align-self: flex-end;
+    font-size: 11px;
+    opacity: 0.7;
+    margin-top: 8px;
+    margin-bottom: -2px;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.right .timestamp {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.left .timestamp {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.singleTick {
+    font-size: 12px;
+    color: white;
+}
+
+/* Hide tick for Ultron (since AI doesn't read receipts) */
+.left .singleTick {
+    display: none;
+}

@@ -1,10 +1,11 @@
 import React from 'react'
 import styles from '../../styles/Chat/TextOrImageMessage.module.css';
 import { useSelector } from 'react-redux';
+import MessageContent from './MessageContent';
 
 const TextOrImageMessage = ({ index, msg, imageFilesWithoutCaption, firstInGroup, readMessages, scrollRef, isText, toggleImageView, moreImages }) => {
 
-    const { user } = useSelector((state) => state.user);
+    const { user } = useSelector((state) => state.user); 
     
     return (
         <div

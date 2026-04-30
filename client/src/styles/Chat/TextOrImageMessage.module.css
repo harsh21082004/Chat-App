@@ -45,7 +45,7 @@
     cursor: pointer;
 }
 
-.message div {
+.message div { 
     padding: 5px 10px;
     margin: 2px 5px;
     min-width: 150px;

@@ -79,7 +79,7 @@
     justify-content: center;
 }
 
-.hamburger p, .profile p, .menu ul a p{
+.hamburger p, .profile p, .menu ul a p, .menu ul div p{
     position: absolute;
     left: 90px;
     font-size: 18px;
@@ -152,6 +152,11 @@
     border-radius: 50%;
     background-color: #90A0AF;
     border: 2px solid #18171D;
+}
+
+.ultron{
+    filter: grayscale(0) !important;
+    opacity: 1 !important;
 }
 
 .menu ul img {

@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styles from '../styles/Chat.module.css';
 import { Link } from 'react-router-dom';
-import { setNewMessage, setMessages, setHasMoreMessages, setMessagePage } from '../redux/slices/chatSlice';
-import { addConversation, getConversations } from '../redux/thunks/conversationThunk';
-import { sendMessage, getMessages } from '../redux/thunks/chatThunks';
 import ImageViewer from './ImageViewer';
 import FilePreviewer from './FilePreviewer';
+
+// 🔽 IMPORT STANDARD MESSAGE COMPONENT
 import TextOrImageMessage from './Chat/TextOrImageMessage';
+// 🔽 IMPORT NEW ULTRON COMPONENT
+import UltronMessage from './Chat/UltronMessage';
+
 import ImageWithFileCaption from './Chat/ImageWithFileCaption';
 import OtherFiles from './Chat/OtherFiles';
 import AudioPlayer from './Chat/AudioPlayer';
@@ -19,15 +21,32 @@ import ChatLoading from './Chat/ChatLoading';
 import DisplayDay from './Chat/DisplayDay';
 import VideoWithFileCaption from './Chat/VideoWithFileCaption';
 
+// Redux Actions
+import { setNewMessage, setMessages, setHasMoreMessages, setMessagePage } from '../redux/slices/chatSlice';
+import { addConversation, getConversations } from '../redux/thunks/conversationThunk';
+import { sendMessage, getMessages } from '../redux/thunks/chatThunks';
+import { performUltronAction, streamUltronMessage } from '../redux/thunks/ultronThunks';
+
+// MUI Components
+import { Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress, IconButton, Tooltip } from '@mui/material';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import TranslateIcon from '@mui/icons-material/Translate';
+import ShortTextIcon from '@mui/icons-material/ShortText';
+import EditIcon from '@mui/icons-material/Edit';
+
 const Chat = () => {
   const dispatch = useDispatch();
   const { chatPerson, user } = useSelector((state) => state.user);
   const chatState = useSelector((state) => state.chat);
   const conversationState = useSelector((state) => state.conversation);
+  const ultronState = useSelector((state) => state.ultron || { loading: false });
+
+  // Check if we are chatting with Ultron to switch component styles
+  const isUltronChat = chatPerson?.name === 'Ultron' || chatPerson?.name === 'Ultron AI';
 
   const [message, setMessage] = useState('');
   const [file, setFile] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0); // ✅ Defined
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isImageOpened, setIsImageOpened] = useState(false);
   const [isVideoOpened, setIsVideoOpened] = useState(false);
   const [videoIndex, setVideoIndex] = useState(0);
@@ -45,33 +64,56 @@ const Chat = () => {
   const [audioContext, setAudioContext] = useState(null);
   const [analyser, setAnalyser] = useState(null);
   const [dataArray, setDataArray] = useState(new Array(60).fill(0));
-  const [mediaStream, setMediaStream] = useState(null); // add this to your state
+  const [mediaStream, setMediaStream] = useState(null);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-
-
-
+  // MUI Menu State for Ultron
+  const [anchorEl, setAnchorEl] = useState(null);
+  const openUltronMenu = Boolean(anchorEl);
 
   const recordedChunks = useRef([]);
   const animationRef = useRef(null);
   const isRecordingRef = useRef(false);
   const isPausedRef = useRef(false);
 
-
   const scrollRef = useRef(null);
   const newMessageLabelRef = useRef(null);
   const chatContainerRef = useRef(null);
-
   const textRef = useRef(null);
 
+  // --- Ultron Handlers ---
+  const handleUltronClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
 
+  const handleUltronClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleUltronAction = async (action, extraParams = {}) => {
+    if (!message.trim()) return;
+
+    handleUltronClose();
+
+    // Call the AI
+    const resultAction = await dispatch(performUltronAction({
+      action,
+      text: message,
+      ...extraParams
+    }));
+
+    if (performUltronAction.fulfilled.match(resultAction)) {
+      // Replace current input with AI result
+      setMessage(resultAction.payload);
+    }
+  };
 
   useEffect(() => {
     const el = textRef.current;
     if (el) {
-      el.style.height = "50px"; // Reset to 1 line
+      el.style.height = "50px";
       const scrollHeight = el.scrollHeight;
-      el.style.height = `${Math.min(scrollHeight, 120)}px`; // Cap at ~5 lines
+      el.style.height = `${Math.min(scrollHeight, 120)}px`;
     }
   }, [message]);
 
@@ -87,8 +129,6 @@ const Chat = () => {
     setIsVideoOpened(!isVideoOpened);
   };
 
-
-
   let frameCount = 0;
 
   const updateWaveform = (analyserNode, timeData) => {
@@ -96,11 +136,7 @@ const Chat = () => {
 
     analyserNode.getByteTimeDomainData(timeData);
 
-
-    // Convert to -1 to 1 and take absolute value
     const normalizedData = [...timeData].map(v => Math.abs((v - 128) / 64));
-
-    // Use a single sample or average to plot one bar
     const avgAmplitude = normalizedData.reduce((a, b) => a + b, 0) / normalizedData.length;
 
     const maxBarHeight = 50;
@@ -116,20 +152,18 @@ const Chat = () => {
     );
   };
 
-
-  //set audio Url and audioBlob
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     setMediaStream(stream);
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const newRecorder = new MediaRecorder(stream);
-    recordedChunks.current = []; // ✅ Reset before starting
+    recordedChunks.current = [];
     newRecorder.start();
 
     newRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
-        recordedChunks.current.push(e.data); // ✅ Save each chunk
+        recordedChunks.current.push(e.data);
       }
     };
 
@@ -170,11 +204,6 @@ const Chat = () => {
     setIntervalId(id);
   };
 
-
-
-
-
-
   const pauseRecording = () => {
     if (recorder && recorder.state === 'recording') {
       recorder.pause();
@@ -191,7 +220,6 @@ const Chat = () => {
       pauseRecording();
     }
   }
-
 
   const resumeRecording = () => {
     if (recorder && recorder.state === 'paused') {
@@ -213,10 +241,9 @@ const Chat = () => {
     }
   };
 
-
   const stopMediaStream = () => {
     if (mediaStream) {
-      mediaStream.getTracks().forEach((track) => track.stop()); // ⛔️ this stops the mic
+      mediaStream.getTracks().forEach((track) => track.stop());
       setMediaStream(null);
     }
   };
@@ -251,8 +278,6 @@ const Chat = () => {
     });
   };
 
-
-
   const cancelRecording = () => {
     if (recorder && recorder.state !== 'inactive') {
       recorder.stop();
@@ -271,9 +296,8 @@ const Chat = () => {
       animationRef.current = null;
     }
 
-    stopMediaStream(); // ⛔️ stop mic
+    stopMediaStream();
   };
-
 
   const handleScroll = (e) => {
     const top = e.target.scrollTop;
@@ -283,8 +307,6 @@ const Chat = () => {
       dispatch(setMessagePage(chatState.messagePage + 1));
     }
   };
-
-
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -316,10 +338,8 @@ const Chat = () => {
           dispatch(setHasMoreMessages(hasMore));
         }
 
-        // Wait for DOM to update
         setTimeout(() => {
           if (chatContainerRef.current) {
-            // Scroll down just slightly to allow next scrollTop === 0 trigger
             chatContainerRef.current.scrollTop = 1;
           }
         }, 0);
@@ -334,10 +354,6 @@ const Chat = () => {
     fetchMessages();
   }, [chatPerson, user, chatState.messagePage]);
 
-
-
-
-
   useEffect(() => {
     if (chatContainerRef.current) {
       const container = chatContainerRef.current;
@@ -347,27 +363,45 @@ const Chat = () => {
         const labelOffsetTop = newLabel.offsetTop;
         const containerHeight = container.clientHeight;
 
-        // Scroll so that the "New Messages" label appears at the bottom
         container.scrollTop = labelOffsetTop - containerHeight + newLabel.clientHeight;
       } else {
-        // No unread messages, scroll to bottom
         container.scrollTop = container.scrollHeight;
       }
     }
   }, [chatState.newMessage]);
 
-
-
   const handleSendMessage = async (e) => {
     e.preventDefault();
     const blob = await stopRecording();
+
+    // --- 🔽 NEW ULTRON LOGIC START ---
+    if (isUltronChat && !file && !blob) {
+      // Prepare data for Ultron Stream
+      // We assume 'conversationState' has the current convo ID, or we pass a dummy one
+      const currentConvo = conversationState.conversations.find(c =>
+        c.receiverId._id === chatPerson._id || c.senderId._id === chatPerson._id
+      );
+
+      const ultronPayload = {
+        content: message,
+        senderId: user._id,
+        receiverId: chatPerson._id,
+        conversationId: currentConvo ? currentConvo._id : "new-session"
+      };
+
+      setMessage(''); // Clear input immediately
+
+      // Dispatch the Stream Thunk
+      dispatch(streamUltronMessage(ultronPayload));
+      return;
+    }
+    // --- 🔼 NEW ULTRON LOGIC END ---
 
     if (!blob && !message && !file) {
       console.error("Audio blob is null");
       return;
     }
     if (!message && !file && !blob) return;
-
 
     try {
       dispatch(setNewMessage(message));
@@ -428,13 +462,9 @@ const Chat = () => {
     return messages[index].senderId !== messages[index - 1].senderId;
   };
 
-
   const messages = chatState.messages || [];
   const readMessages = messages.slice(0, messages.length - unreadCount);
   const unreadMessages = messages.slice(messages.length - unreadCount);
-
-
-
 
   const allImageFiles = messages.flatMap(msg =>
     msg.files.map(file => ({
@@ -455,13 +485,11 @@ const Chat = () => {
   );
 
   const imageMessages = allImageFiles.filter(
-    (msg) =>
-      msg.fileType.startsWith('image/')
+    (msg) => msg.fileType.startsWith('image/')
   );
 
   const videoMessages = allVideoFiles.filter(
-    (msg) =>
-      msg.fileType.startsWith('video/')
+    (msg) => msg.fileType.startsWith('video/')
   );
 
   const formatTime = (seconds) => {
@@ -475,17 +503,13 @@ const Chat = () => {
   useEffect(() => {
     const el = iconRef.current;
     if (el) {
-      // Remove and re-add the class to re-trigger animation
       el.classList.remove('bubble-animation');
-      // Trigger reflow
       void el.offsetWidth;
       el.classList.add('bubble-animation');
     }
   }, [isPaused]);
 
   const iconClass = isPaused ? 'fa-solid fa-microphone' : 'fa-regular fa-circle-pause';
-
-
 
   return (
     <>
@@ -507,12 +531,11 @@ const Chat = () => {
             </div>
           </div>
 
-          {chatState.messageFetchedStatus !== 'succeeded' ? (<ChatSkeleton />) : (<div className={styles.chatBody} ref={chatContainerRef} onScroll={handleScroll}>
+          {chatState.messageFetchedStatus === 'loading' ? (<ChatSkeleton />) : (<div className={styles.chatBody} ref={chatContainerRef} onScroll={handleScroll}>
             {chatState.fetchingMoreStatus === 'loading' && (<ChatLoading />)}
             {readMessages.map((msg, index) => {
               const firstInGroup = isFirstInGroup(readMessages, index);
               const isText = msg.messageType === 'text';
-              const hasFiles = msg.files?.length > 0;
 
               const imageFiles = msg.files?.filter(file => file.fileType.startsWith('image/')) || [];
               const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/') && !file.fileType.startsWith('video/') && !file.fileType.startsWith('audio/')) || [];
@@ -527,41 +550,58 @@ const Chat = () => {
               const moreImages = imageFilesWithoutCaption.length - 4;
               const moreVideos = videoFiles.length - 4;
 
-
               return (
-                <>
-
+                <React.Fragment key={index}>
                   <DisplayDay messages={readMessages} msg={msg} i={index} />
-                  {/* Text or Image Grid (if no captions) */}
+
+                  {/* 🔽 UPDATED: Use UltronMessage if chatting with Ultron, else TextOrImageMessage */}
                   {(isText || imageFiles.filter(file => file.filecaption === '').length > 0) && (
-                    <TextOrImageMessage index={index} msg={msg} imageFilesWithoutCaption={imageFilesWithoutCaption} moreImages={moreImages} firstInGroup={firstInGroup} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleImageView={toggleImageView} />
+                    isUltronChat ? (
+                      <UltronMessage
+                        index={index}
+                        msg={msg}
+                        firstInGroup={firstInGroup}
+                        readMessages={readMessages}
+                        scrollRef={scrollRef}
+                      />
+                    ) : (
+                      <TextOrImageMessage
+                        index={index}
+                        msg={msg}
+                        imageFilesWithoutCaption={imageFilesWithoutCaption}
+                        moreImages={moreImages}
+                        firstInGroup={firstInGroup}
+                        isText={isText}
+                        readMessages={readMessages}
+                        scrollRef={scrollRef}
+                        toggleImageView={toggleImageView}
+                      />
+                    )
                   )}
 
                   {(videoFiles.filter(file => file.filecaption === '').length > 0) && (
                     <VideoMessage index={index} msg={msg} videoFilesWithoutCaption={videoFilesWithoutCaption} firstInGroup={firstInGroup} moreVideos={moreVideos} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleVideoView={toggleVideoView} />
                   )}
 
-                  {/* Images with Captions (rendered separately) */}
                   {imageFilesWithCaption.length > 0 && imageFilesWithCaption.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     return (
-                      <ImageWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleImageView={toggleImageView} msg={msg} />
+                      <ImageWithFileCaption key={fileIndex} index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleImageView={toggleImageView} msg={msg} />
                     )
                   })}
 
                   {videoFilesWithcaption.length > 0 && videoFilesWithcaption.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     return (
-                      <VideoWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleVideoView={toggleVideoView} msg={msg} />
+                      <VideoWithFileCaption key={fileIndex} index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleVideoView={toggleVideoView} msg={msg} />
                     )
                   })}
 
-                  {/* Other file types */}
                   {otherFiles.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     const containsCaption = file.filecaption?.trim() !== '';
                     return (
-                      <OtherFiles index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} containsCaption={containsCaption} firstInGroup={firstInGroup} msg={msg} />
+                      <OtherFiles key={fileIndex} index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} containsCaption={containsCaption} firstInGroup={firstInGroup} msg={msg} />
                     );
                   })}
 
@@ -569,11 +609,10 @@ const Chat = () => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     const containsCaption = file.filecaption?.trim() !== '';
                     return (
-                      <AudioPlayer file={file} audioUrl={fileUrl} firstInGroup={firstInGroup} msg={msg} index={index} fileIndex={fileIndex} containsCaption={containsCaption} />
+                      <AudioPlayer key={fileIndex} file={file} audioUrl={fileUrl} firstInGroup={firstInGroup} msg={msg} index={index} fileIndex={fileIndex} containsCaption={containsCaption} />
                     );
                   })}
-
-                </>
+                </React.Fragment>
               );
             })}
 
@@ -585,12 +624,10 @@ const Chat = () => {
               </div>
             )}
 
-
             {chatState.fetchingMoreStatus === 'loading' && (<ChatLoading />)}
             {unreadMessages.map((msg, index) => {
               const firstInGroup = isFirstInGroup(readMessages, index);
               const isText = msg.messageType === 'text';
-              const hasFiles = msg.files?.length > 0;
 
               const imageFiles = msg.files?.filter(file => file.fileType.startsWith('image/')) || [];
               const otherFiles = msg.files?.filter(file => !file.fileType.startsWith('image/') && !file.fileType.startsWith('video/') && !file.fileType.startsWith('audio/')) || [];
@@ -605,41 +642,58 @@ const Chat = () => {
               const moreImages = imageFilesWithoutCaption.length - 4;
               const moreVideos = videoFiles.length - 4;
 
-
               return (
-                <>
-
+                <React.Fragment key={index}>
                   <DisplayDay messages={readMessages} msg={msg} i={index} />
-                  {/* Text or Image Grid (if no captions) */}
+
+                  {/* 🔽 UPDATED: Use UltronMessage if chatting with Ultron, else TextOrImageMessage */}
                   {(isText || imageFiles.filter(file => file.filecaption === '').length > 0) && (
-                    <TextOrImageMessage index={index} msg={msg} imageFilesWithoutCaption={imageFilesWithoutCaption} moreImages={moreImages} firstInGroup={firstInGroup} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleImageView={toggleImageView} />
+                    isUltronChat ? (
+                      <UltronMessage
+                        index={index}
+                        msg={msg}
+                        firstInGroup={firstInGroup}
+                        readMessages={readMessages}
+                        scrollRef={scrollRef}
+                      />
+                    ) : (
+                      <TextOrImageMessage
+                        index={index}
+                        msg={msg}
+                        imageFilesWithoutCaption={imageFilesWithoutCaption}
+                        moreImages={moreImages}
+                        firstInGroup={firstInGroup}
+                        isText={isText}
+                        readMessages={readMessages}
+                        scrollRef={scrollRef}
+                        toggleImageView={toggleImageView}
+                      />
+                    )
                   )}
 
                   {(videoFiles.filter(file => file.filecaption === '').length > 0) && (
                     <VideoMessage index={index} msg={msg} videoFilesWithoutCaption={videoFilesWithoutCaption} firstInGroup={firstInGroup} moreVideos={moreVideos} isText={isText} readMessages={readMessages} scrollRef={scrollRef} toggleVideoView={toggleVideoView} />
                   )}
 
-                  {/* Images with Captions (rendered separately) */}
                   {imageFilesWithCaption.length > 0 && imageFilesWithCaption.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     return (
-                      <ImageWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleImageView={toggleImageView} msg={msg} />
+                      <ImageWithFileCaption key={fileIndex} index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleImageView={toggleImageView} msg={msg} />
                     )
                   })}
 
                   {videoFilesWithcaption.length > 0 && videoFilesWithcaption.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     return (
-                      <VideoWithFileCaption index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleVideoView={toggleVideoView} msg={msg} />
+                      <VideoWithFileCaption key={fileIndex} index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} firstInGroup={firstInGroup} toggleVideoView={toggleVideoView} msg={msg} />
                     )
                   })}
 
-                  {/* Other file types */}
                   {otherFiles.map((file, fileIndex) => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     const containsCaption = file.filecaption?.trim() !== '';
                     return (
-                      <OtherFiles index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} containsCaption={containsCaption} firstInGroup={firstInGroup} msg={msg} />
+                      <OtherFiles key={fileIndex} index={index} fileIndex={fileIndex} file={file} fileUrl={fileUrl} containsCaption={containsCaption} firstInGroup={firstInGroup} msg={msg} />
                     );
                   })}
 
@@ -647,11 +701,10 @@ const Chat = () => {
                     const fileUrl = `${process.env.REACT_APP_BACKEND_BASE_URL + file.url}`;
                     const containsCaption = file.filecaption?.trim() !== '';
                     return (
-                      <AudioPlayer file={file} audioUrl={fileUrl} firstInGroup={firstInGroup} msg={msg} index={index} fileIndex={fileIndex} containsCaption={containsCaption} />
+                      <AudioPlayer key={fileIndex} file={file} audioUrl={fileUrl} firstInGroup={firstInGroup} msg={msg} index={index} fileIndex={fileIndex} containsCaption={containsCaption} />
                     );
                   })}
-
-                </>
+                </React.Fragment>
               );
             })}
 
@@ -661,10 +714,8 @@ const Chat = () => {
             <form onSubmit={handleSendMessage}>
               <div className={styles.input}>
                 {isRecording ? (
-                  // ✅ Show only voice recorder UI
                   <AudioRecorder dataArray={dataArray} iconRef={iconRef} iconClass={iconClass} isPaused={isPaused} togglePauseRecording={togglePauseRecording} handleSendMessage={handleSendMessage} formatTime={formatTime} recordingTime={recordingTime} cancelRecording={cancelRecording} />
                 ) : (
-                  // ✅ Default message input UI
                   <>
                     <label className={styles.attachFile} htmlFor="file">
                       <img src="/attach-file.png" alt="attach" />
@@ -692,6 +743,43 @@ const Chat = () => {
                       }}
                       multiple
                     />
+                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '10px', marginBottom: '5px' }}>
+                      {ultronState.loading ? (
+                        <CircularProgress className={styles.ultron_loader} size={24} sx={{ color: '#00e5ff' }} />
+                      ) : (
+                        <>
+                          <Tooltip title="Ultron Tools">
+                            <IconButton onClick={handleUltronClick} sx={{ color: '#00e5ff' }}>
+                              <AutoFixHighIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Menu
+                            anchorEl={anchorEl}
+                            open={openUltronMenu}
+                            onClose={handleUltronClose}
+                            PaperProps={{
+                              style: {
+                                backgroundColor: '#1f2c34', // Dark theme match
+                                color: 'white',
+                              },
+                            }}
+                          >
+                            <MenuItem onClick={() => handleUltronAction('rephrase', { tone: 'professional' })}>
+                              <ListItemIcon><EditIcon sx={{ color: 'white' }} /></ListItemIcon>
+                              <ListItemText>Rephrase (Professional)</ListItemText>
+                            </MenuItem>
+                            <MenuItem onClick={() => handleUltronAction('summarize')}>
+                              <ListItemIcon><ShortTextIcon sx={{ color: 'white' }} /></ListItemIcon>
+                              <ListItemText>Summarize</ListItemText>
+                            </MenuItem>
+                            <MenuItem onClick={() => handleUltronAction('translate', { target_language: 'Hindi' })}>
+                              <ListItemIcon><TranslateIcon sx={{ color: 'white' }} /></ListItemIcon>
+                              <ListItemText>Translate to Hindi</ListItemText>
+                            </MenuItem>
+                          </Menu>
+                        </>
+                      )}
+                    </div>
 
                     <div className={styles.footerIcons}>
                       <img src="/mic.png" alt="mic" onClick={startRecording} style={{ cursor: 'pointer' }} />

@@ -5,6 +5,7 @@ import { setChatPerson } from '../redux/slices/userSlice';
 import { getConversations } from '../redux/thunks/conversationThunk';
 import { toggleActivePage } from '../redux/slices/conversationSlice';
 import { markAsSeen } from '../redux/thunks/chatThunks';
+import { resetMessages } from '../redux/slices/chatSlice';
 
 const Conversations = () => {
     const dispatch = useDispatch();
@@ -25,6 +26,7 @@ const Conversations = () => {
 
 
     const handleChatPerson = (receiver) => async () => {
+        dispatch(resetMessages());
         dispatch(setChatPerson(receiver));
     };
 

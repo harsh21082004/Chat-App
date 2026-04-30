@@ -46,6 +46,19 @@ const chatSlice = createSlice({
       state.messages = [];
       state.activeConversationId = null;
       state.fetched = false;
+    },
+    // 🔽 NEW: Updates the content of the very last message (for AI Streaming)
+    streamMessageUpdate: (state, action) => {
+        const lastMsgIndex = state.messages.length - 1;
+        if (lastMsgIndex >= 0) {
+            // Append the new chunk of text to the last message
+            state.messages[lastMsgIndex].content += action.payload;
+        }
+    },
+    
+    // 🔽 NEW: Adds a placeholder empty message for AI before streaming starts
+    addPlaceholderMessage: (state, action) => {
+        state.messages.push(action.payload);
     }
   },
 
@@ -95,6 +108,7 @@ const chatSlice = createSlice({
   }
 });
 
-export const { setMessages, addMessage, setNewMessage, resetMessages, setMessagePage, setHasMoreMessages } = chatSlice.actions;
+export const { setMessages, addMessage, setNewMessage, resetMessages, setMessagePage, setHasMoreMessages, streamMessageUpdate,   // Export this
+    addPlaceholderMessage } = chatSlice.actions;
 
 export default chatSlice.reducer;
